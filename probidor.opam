@@ -1,0 +1,17 @@
+name: "probidor"
+opam-version: "2.0"
+maintainer: "mathis.bouverot@ens.psl.eu"
+authors: [
+  "Mathis Bouverot-Dupuis <mathis.bouerot@ens.psl.eu>"
+]
+license: "MIT"
+synopsis: "A game engine for the Quoridor game, that communicates to players via http"
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+]
+depends: [
+  "ocaml" { >= "4.14" }
+  "dune"  { >= "2.8" }
+  "cohttp-lwt-unix" { >= "5.3.0" }
+  "yojson" { >= "2.1.1" }
+]

@@ -1,0 +1,5 @@
+{
+  "action": "move-pawn",
+  "player": 42424242,
+  "dir": "N"
+}
