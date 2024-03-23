@@ -1,3 +1,6 @@
+(* This file defines the HTTP protocol that the engine (server) and 
+   players (clients) use to communicate. *)
+
 (** The directions a pawn can move in. *)
 type direction = 
   | N

@@ -1,5 +1,5 @@
 (executable
  (public_name quoridor)
- (flags (:standard -w +A-42-48-70 -warn-error +A-44))
- (libraries engine http)
+ (flags (:standard -warn-error +A))
+ (libraries http)
  (modules quoridor))
