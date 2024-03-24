@@ -1,4 +1,4 @@
 (library
- (name engine)
+ (name quoridor)
  (flags (:standard -warn-error +A))
  (libraries http ocamlgraph))

@@ -15,4 +15,5 @@ depends: [
   "cohttp-lwt-unix" { >= "5.3.0" }
   "yojson" { >= "2.1.1" }
   "ocamlgraph" { >= "2.1.0" }
+  "qcheck-core" { >= "0.21.3" }
 ]

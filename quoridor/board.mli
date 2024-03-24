@@ -9,6 +9,7 @@
 type pos = int * int
 
 (** The type of a wall on the board.
+    The length of a wall should always be positive.
     The position [pos] is the upper-left cell among those directly adjacent to the wall. *)
 type wall =
   { horizontal: bool
