@@ -13,9 +13,6 @@ end
 let pos_gen : pos Gen.t = 
   Gen.pair Gen.small_signed_int Gen.small_signed_int
 
-let pos_print : pos Print.t = 
-  Print.pair Print.int Print.int
-
 let wall_gen : wall Gen.t = 
   let open Gen_syntax in 
   let* horizontal = Gen.bool in
@@ -23,17 +20,23 @@ let wall_gen : wall Gen.t =
   let* pos = pos_gen in
   return { horizontal; length; pos }
 
-let wall_print : wall Print.t = fun wall -> 
-  Format.sprintf "{ horizontal:%b; length:%d; pos:%s }" 
-    wall.horizontal
-    wall.length
-    (pos_print wall.pos)
-
 let board_gen : t Gen.t = 
   let open Gen_syntax in 
   let* rows = Gen.int_range 1 50 in 
   let* columns = Gen.int_range 1 50 in 
   return (make ~rows ~columns)
+
+(*************************************************************************************)
+(* Printers *)
+
+let pos_print : pos Print.t = 
+  Print.pair Print.int Print.int
+
+let wall_print : wall Print.t = fun wall -> 
+  Format.sprintf "{ horizontal:%b; length:%d; pos:%s }" 
+    wall.horizontal
+    wall.length
+    (pos_print wall.pos)
 
 let board_print : t Print.t = fun board -> 
   Format.sprintf "{ rows:%d; cols:%d }" (rows board) (columns board)

@@ -29,7 +29,7 @@ type request =
 
 (** The type of responses the engine sends to players. *)
 type response =
-  | NewPlayer of { player: int; rows: int; cols: int; wall_count: int }
+  | Welcome of { player: int; rows: int; cols: int; wall_count: int }
     (** Give a player it's identifier and the information about the current game. *)
   | Ok 
     (** Just acknowledge the request. *)
@@ -38,26 +38,26 @@ type response =
   
 let direction_to_string (dir : direction) : string = 
   match dir with 
-  | N  -> "N"
-  | NW -> "NW"
-  | W  -> "W"
-  | SW -> "SW"
-  | S  -> "S"
-  | SE -> "SE"
-  | E  -> "E"
-  | NE -> "NE"
+  | N  -> "n"
+  | NW -> "nw"
+  | W  -> "w"
+  | SW -> "sw"
+  | S  -> "s"
+  | SE -> "se"
+  | E  -> "e"
+  | NE -> "ne"
 
 let direction_from_string (dir : string) : direction =
   match dir with 
-  | "N"  -> N
-  | "NW" -> NW
-  | "W"  -> W
-  | "SW" -> SW
-  | "S"  -> S
-  | "SE" -> SE
-  | "E"  -> E
-  | "NE" -> NE
-  | _    -> raise (Failure "direction_from_string")
+  | "n"  -> N
+  | "nw" -> NW
+  | "w"  -> W
+  | "sw" -> SW
+  | "s"  -> S
+  | "se" -> SE
+  | "e"  -> E
+  | "ne" -> NE
+  | _    -> raise (Invalid_argument "direction_from_string")
 
 let orientation_to_string (orient : orientation) : string =
   match orient with 
@@ -66,9 +66,9 @@ let orientation_to_string (orient : orientation) : string =
 
 let orientation_from_string (orient : string) : orientation =
   match orient with 
-  | "Vertical"   -> Vertical
-  | "Horizontal" -> Horizontal
-  | _            -> raise (Failure "orientation_from_string")
+  | "vertical"   -> Vertical
+  | "horizontal" -> Horizontal
+  | _            -> raise (Invalid_argument "orientation_from_string")
 
 
 (** Parse a request from Json. 
@@ -114,7 +114,7 @@ let encode_response (resp : response) : Cohttp.Code.status_code * Yojson.Basic.t
   match resp with 
   | Ok          -> `OK, `Null
   | Error err   -> `Bad_request, `String err
-  | NewPlayer i -> 
+  | Welcome i -> 
       `OK, `Assoc [ ("player"    , `Int i.player)
                   ; ("rows"      , `Int i.rows)
                   ; ("cols"      , `Int i.cols)
@@ -135,7 +135,7 @@ let decode_response (status_code : Cohttp.Code.status_code) (json : Yojson.Basic
       let rows       = json |> member "rows"       |> to_int in
       let cols       = json |> member "cols"       |> to_int in
       let wall_count = json |> member "wall-count" |> to_int in
-      NewPlayer { player; rows; cols; wall_count }
+      Welcome { player; rows; cols; wall_count }
   | _, json -> 
       raise (Type_error ("Invalid response format", json))
       
