@@ -7,5 +7,5 @@
 (test
  (name http_tests)
  (flags (:standard -warn-error +A))
- (libraries http qcheck-core qcheck-core.runner)
- (modules http_tests))
+ (modules http_tests)
+ (libraries http qcheck-core qcheck-core.runner))

@@ -2,7 +2,7 @@
 
 # Building and running
 
-To install the dependencies : 
+To install the dependencies (assuming opam is installed) : 
 $ opam install . --deps-only
 
 To build : 
