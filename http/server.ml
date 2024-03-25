@@ -16,7 +16,7 @@ let callback (on_request : request -> response Lwt.t) _conn _req body =
     Server.respond_string ~status ~body:(Yojson.Basic.to_string body) ()
   with
     Yojson.Basic.Util.Type_error (msg, json) -> 
-      (* We coulnd't decode the request : notify the client. *) 
+      (* We couldn't decode the request : notify the client. *) 
       let err = 
         Format.sprintf 
           "Failed to decode request.\nError: %s\n%s\n" 
