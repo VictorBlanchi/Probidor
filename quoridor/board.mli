@@ -39,12 +39,12 @@ val pos_in_board : t -> pos -> bool
 (** Is a wall in the bounds of the board ? *)
 val wall_in_board : t -> wall -> bool
 
-(** Add a vertical or horizontal wall to the board. 
+(** Add a wall to the board. 
     Raises [Wall_out_of_bounds] if the wall placement is invalid.
     Raises [Wall_overlap] if the wall would overlap with another. *)
 val add_wall : t -> wall -> unit
 
-(** Add a vertical or horizontal wall to the board. 
+(** Remove a wall from the board. 
     Raises [Wall_out_of_bounds] if the wall placement is invalid.
     Raises [Wall_missing] if there is no wall here. *)
 val remove_wall : t -> wall -> unit
