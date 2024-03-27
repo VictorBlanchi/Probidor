@@ -1,0 +1,6 @@
+version=0.26.1
+profile=ocamlformat
+if-then-else=keyword-first
+exp-grouping=preserve
+space-around-lists=true
+space-around-arrays=true

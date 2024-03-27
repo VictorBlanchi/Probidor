@@ -1,4 +1,5 @@
 (library
  (name http)
- (flags (:standard -warn-error +A))
+ (flags
+  (:standard -warn-error +A))
  (libraries cohttp-lwt-unix yojson))

@@ -1,11 +1,13 @@
 (test
  (name board_tests)
- (flags (:standard -warn-error +A))
+ (flags
+  (:standard -warn-error +A))
  (modules board_tests)
  (libraries quoridor qcheck-core qcheck-core.runner))
 
 (test
  (name http_tests)
- (flags (:standard -warn-error +A))
+ (flags
+  (:standard -warn-error +A))
  (modules http_tests)
  (libraries http qcheck-core qcheck-core.runner))
