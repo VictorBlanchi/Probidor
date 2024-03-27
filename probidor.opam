@@ -12,7 +12,11 @@ build: [
 depends: [
   "ocaml" { >= "5.1.1" }
   "dune"  { >= "2.8" }
+  
   "ocamlformat" { = "0.26.1" }
+  "ocamllsp" { >= "1.17.0" }
+  "user-setup" { >= "0.7" }
+
   "lwt" { >= "5.7.0" }
   "yojson" { >= "2.1.1" }
   "ocamlgraph" { >= "2.1.0" }
