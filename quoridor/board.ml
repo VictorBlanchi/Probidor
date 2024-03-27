@@ -97,3 +97,18 @@ let reachable board start pred =
   with Found -> true
 
 let exist_edge _board _pos1 _pos2 = failwith "Todo"
+
+let generate_walls board length_wall =
+  let wall_hor =
+    List.concat
+      (List.init board.rows (fun i ->
+           List.init board.columns (fun j ->
+               { horizontal = true; length = length_wall; pos = (i, j) })))
+  in
+  let wall_vert =
+    List.concat
+      (List.init board.rows (fun i ->
+           List.init board.columns (fun j ->
+               { horizontal = false; length = length_wall; pos = (i, j) })))
+  in
+  List.append wall_hor wall_vert
