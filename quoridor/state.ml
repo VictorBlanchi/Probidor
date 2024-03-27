@@ -19,16 +19,19 @@ type action =
   | PlaceWall of Board.wall  (** Place a wall for the current player. *)
 
 (** The game state specific to a player. *)
-type player_data = {mutable pawn_pos: Board.pos; mutable remaining_walls: int}
+type player_data =
+  { mutable pawn_pos : Board.pos; mutable remaining_walls : int }
+
+type t =
+  { board : Board.t
+  ; wall_length : int
+  ; player_A : player_data
+  ; player_B : player_data
+  ; mutable to_play : player
+  }
 
 (** The state of the game.
     The board always has an odd number of columns. *)
-type t =
-  { board: Board.t
-  ; wall_length: int
-  ; player_A: player_data
-  ; player_B: player_data
-  ; mutable to_play: player }
 
 (** Turn PlayerA to PlayerB and vice-versa. *)
 let swap_player (p : player) : player =
@@ -44,32 +47,26 @@ let make rows columns wall_count wall_length to_play =
   else if wall_count < 0
   then raise (Invalid_argument "wall_count")
   else
-    let player_A = {pawn_pos= (0, columns / 2); remaining_walls= wall_count} in
+    let player_A =
+      { pawn_pos = (0, columns / 2); remaining_walls = wall_count }
+    in
     let player_B =
-      {pawn_pos= (rows - 1, columns / 2); remaining_walls= wall_count}
+      { pawn_pos = (rows - 1, columns / 2); remaining_walls = wall_count }
     in
     let board = Board.make ~rows ~columns in
-    {player_A; player_B; board; wall_length; to_play}
+    { player_A; player_B; board; wall_length; to_play }
 
 (** Position from a direction *)
 let pos_from_dir (d : direction) : Board.pos =
   match d with
-  | N ->
-      (-1, 0)
-  | NW ->
-      (-1, -1)
-  | W ->
-      (0, -1)
-  | SW ->
-      (1, -1)
-  | S ->
-      (1, 0)
-  | SE ->
-      (1, 1)
-  | E ->
-      (0, 1)
-  | NE ->
-      (-1, 1)
+  | N -> (-1, 0)
+  | NW -> (-1, -1)
+  | W -> (0, -1)
+  | SW -> (1, -1)
+  | S -> (1, 0)
+  | SE -> (1, 1)
+  | E -> (0, 1)
+  | NE -> (-1, 1)
 
 (** Return the active player. *)
 let active_player (game : t) : player_data =
@@ -103,18 +100,19 @@ let is_free (game : t) (d : direction list) : bool =
   && Board.pos_in_board game.board p'
 
 (** Check that there is not wall preventing the active player to reach where he wants to go*)
-let can_pass (game : t) (d : direction list) : bool =
-  let aux (d : direction) =
-    match d with
-    | (N | S | E | W) as d ->
-        let p = pos_active game in
-        let offset = pos_from_dir d in
-        let p' = Board.add_pos p offset in
-        Board.exist_edge game.board p p'
-    | NW | SW | NE | SE ->
-        false
-  in
-  List.fold_left ( && ) true (List.map aux d)
+let can_pass (game : t) (dirs : direction list) : bool =
+  List.for_all
+    begin
+      fun d ->
+        match d with
+        | (N | S | E | W) as d ->
+            let p = pos_active game in
+            let offset = pos_from_dir d in
+            let p' = Board.add_pos p offset in
+            Board.exist_edge game.board p p'
+        | NW | SW | NE | SE -> false
+    end
+    dirs
 
 (** Winning positions of player A (i.e. the bottom row). *)
 let win_pos_A (game : t) (p : Board.pos) : bool =
@@ -128,10 +126,8 @@ let win_pos_B (_game : t) (p : Board.pos) : bool =
 (** Winning positions of active player. *)
 let win_pos (game : t) : Board.pos -> bool =
   match game.to_play with
-  | PlayerA ->
-      win_pos_A game
-  | PlayerB ->
-      win_pos_B game
+  | PlayerA -> win_pos_A game
+  | PlayerB -> win_pos_B game
 
 (** Check whether the active player wins. *)
 let win (game : t) : bool = win_pos game (pos_active game)
@@ -149,20 +145,16 @@ let is_blocked (game : t) : bool =
 (** Remaining walls of the active player. *)
 let remaining_walls (game : t) : int =
   match game.to_play with
-  | PlayerA ->
-      game.player_A.remaining_walls
-  | PlayerB ->
-      game.player_B.remaining_walls
+  | PlayerA -> game.player_A.remaining_walls
+  | PlayerB -> game.player_B.remaining_walls
 
 (** Decrement the number of remaining walls of the active player*)
 let decrement_walls (game : t) : unit =
   let m = remaining_walls game in
-  if m <= 0 then raise OutOfWalls ;
+  if m <= 0 then raise OutOfWalls;
   match game.to_play with
-  | PlayerA ->
-      game.player_A.remaining_walls <- m - 1
-  | PlayerB ->
-      game.player_B.remaining_walls <- m - 1
+  | PlayerA -> game.player_A.remaining_walls <- m - 1
+  | PlayerB -> game.player_B.remaining_walls <- m - 1
 
 (** Check if moving the active player's pawn in the direction d is valid,
     and if yes return the new position of the pawn. *)
@@ -181,75 +173,74 @@ let move_pawn_valid (game : t) (d : direction) : Board.pos option =
       then Some (target_pos game [ d; d ])
       else None
   | (NE | SE | SW | NW) as d -> begin
-    if not (is_free game [ d ])
-    then None
-    else
-      match d with
-      | NW ->
-          if (* Either the other player is at direction N or W of the active player *)
-             not (is_free game [ N ])
-          then
-            (* Inactive player is at the N of active player*)
-            if can_pass game [ N; W ]
-               (* Active player can go at N then W *)
-               && not (can_pass game [ N; N ])
-               (* There is a wall preventing the active player to jump directly over the inactive player *)
-            then Some (target_pos game [ N; W ])
+      if not (is_free game [ d ])
+      then None
+      else
+        match d with
+        | NW ->
+            if (* Either the other player is at direction N or W of the active player *)
+               not (is_free game [ N ])
+            then
+              (* Inactive player is at the N of active player*)
+              if can_pass game [ N; W ]
+                 (* Active player can go at N then W *)
+                 && not (can_pass game [ N; N ])
+                 (* There is a wall preventing the active player to jump directly over the inactive player *)
+              then Some (target_pos game [ N; W ])
+              else None
+            else if not (is_free game [ W ])
+            then
+              (* Inactive player is at the W of active player *)
+              if can_pass game [ W; N ] && not (can_pass game [ W; W ])
+              then Some (target_pos game [ N; W ])
+              else None
             else None
-          else if not (is_free game [ W ])
-          then
-            (* Inactive player is at the W of active player *)
-            if can_pass game [ W; N ] && not (can_pass game [ W; W ])
-            then Some (target_pos game [ N; W ])
+        | SW ->
+            if not (is_free game [ S ])
+            then
+              if can_pass game [ S; W ] && not (can_pass game [ S; S ])
+              then Some (target_pos game [ S; W ])
+              else None
+            else if not (is_free game [ W ])
+            then
+              if can_pass game [ W; S ] && not (can_pass game [ W; W ])
+              then Some (target_pos game [ S; W ])
+              else None
             else None
-          else None
-      | SW ->
-          if not (is_free game [ S ])
-          then
-            if can_pass game [ S; W ] && not (can_pass game [ S; S ])
-            then Some (target_pos game [ S; W ])
+        | SE ->
+            if not (is_free game [ S ])
+            then
+              if can_pass game [ S; E ] && not (can_pass game [ S; S ])
+              then Some (target_pos game [ S; E ])
+              else None
+            else if not (is_free game [ E ])
+            then
+              if can_pass game [ E; S ] && not (can_pass game [ E; E ])
+              then Some (target_pos game [ S; E ])
+              else None
             else None
-          else if not (is_free game [ W ])
-          then
-            if can_pass game [ W; S ] && not (can_pass game [ W; W ])
-            then Some (target_pos game [ S; W ])
+        | NE ->
+            if not (is_free game [ N ])
+            then
+              if can_pass game [ N; E ] && not (can_pass game [ N; N ])
+              then Some (target_pos game [ N; E ])
+              else None
+            else if not (is_free game [ E ])
+            then
+              if can_pass game [ E; N ] && not (can_pass game [ E; E ])
+              then Some (target_pos game [ N; E ])
+              else None
             else None
-          else None
-      | SE ->
-          if not (is_free game [ S ])
-          then
-            if can_pass game [ S; E ] && not (can_pass game [ S; S ])
-            then Some (target_pos game [ S; E ])
-            else None
-          else if not (is_free game [ E ])
-          then
-            if can_pass game [ E; S ] && not (can_pass game [ E; E ])
-            then Some (target_pos game [ S; E ])
-            else None
-          else None
-      | NE ->
-          if not (is_free game [ N ])
-          then
-            if can_pass game [ N; E ] && not (can_pass game [ N; N ])
-            then Some (target_pos game [ N; E ])
-            else None
-          else if not (is_free game [ E ])
-          then
-            if can_pass game [ E; N ] && not (can_pass game [ E; E ])
-            then Some (target_pos game [ N; E ])
-            else None
-          else None
-      | _ ->
-          assert false
+        | _ -> assert false
     end
 
 (** Check if the active player can place this wall. *)
 let place_wall_valid (game : t) (w : Board.wall) : bool =
   try
-    if remaining_walls game <= 0 then raise OutOfWalls ;
-    Board.add_wall game.board w ;
+    if remaining_walls game <= 0 then raise OutOfWalls;
+    Board.add_wall game.board w;
     let game_is_blocked = is_blocked game in
-    Board.remove_wall game.board w ;
+    Board.remove_wall game.board w;
     not game_is_blocked
   with _ -> false
 
@@ -257,23 +248,24 @@ let place_wall_valid (game : t) (w : Board.wall) : bool =
 let execute_action (game : t) (act : action) : bool =
   match act with
   | MovePawn d -> (
-    match move_pawn_valid game d with
-    | Some p ->
-        (active_player game).pawn_pos <- p ;
-        true
-    | None ->
-        false )
+      match move_pawn_valid game d with
+      | Some p ->
+          (active_player game).pawn_pos <- p;
+          true
+      | None -> false)
   | PlaceWall w -> (
-    try
-      if remaining_walls game <= 0 then raise OutOfWalls ;
-      Board.add_wall game.board w ;
-      let game_is_blocked = is_blocked game in
-      if game_is_blocked
-      then (
-        Board.remove_wall game.board w ;
-        false )
-      else (decrement_walls game ; true)
-    with _ -> false )
+      try
+        if remaining_walls game <= 0 then raise OutOfWalls;
+        Board.add_wall game.board w;
+        let game_is_blocked = is_blocked game in
+        if game_is_blocked
+        then (
+          Board.remove_wall game.board w;
+          false)
+        else (
+          decrement_walls game;
+          true)
+      with _ -> false)
 
 (** Switch the player turn. *)
 let switch_player (game : t) : unit =
@@ -288,8 +280,8 @@ let generate_actions (game : t) : action list =
       (fun d -> MovePawn d)
       (List.filter
          (fun d ->
-           match move_pawn_valid game d with None -> false | Some _ -> true )
-         directions )
+           match move_pawn_valid game d with None -> false | Some _ -> true)
+         directions)
   in
   let walls = Board.generate_walls game.board game.wall_length in
   let place_wall =

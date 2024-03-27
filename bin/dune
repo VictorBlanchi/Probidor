@@ -2,5 +2,19 @@
  (public_name quoridor)
  (flags
   (:standard -warn-error +A))
- (libraries http)
+ (libraries http lwt)
  (modules quoridor))
+
+(executable
+ (public_name socket_client)
+ (flags
+  (:standard -warn-error +A))
+ (libraries lwt)
+ (modules socket_client))
+
+(executable
+ (public_name socket_server)
+ (flags
+  (:standard -warn-error +A))
+ (libraries lwt)
+ (modules socket_server))
