@@ -96,7 +96,7 @@ let reachable board start pred =
     false
   with Found -> true
 
-let exist_edge _board _pos1 _pos2 = failwith "Todo"
+let exist_edge board p1 p2 = Grph.mem_edge board.graph p1 p2
 
 let generate_walls board length_wall =
   let wall_hor =
