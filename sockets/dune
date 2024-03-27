@@ -1,5 +1,5 @@
 (library
- (name http)
+ (name sockets)
  (flags
   (:standard -warn-error +A))
- (libraries lwt yojson))
+ (libraries lwt))

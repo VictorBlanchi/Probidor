@@ -1,15 +1,8 @@
 (executable
- (public_name quoridor)
- (flags
-  (:standard -warn-error +A))
- (libraries http lwt)
- (modules quoridor))
-
-(executable
  (public_name socket_client)
  (flags
   (:standard -warn-error +A))
- (libraries lwt)
+ (libraries lwt lwt.unix)
  (modules socket_client))
 
 (executable
