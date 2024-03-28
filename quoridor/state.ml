@@ -1,7 +1,7 @@
 (* This file defines the representation of the game's state used in the engine. *)
 
 (** Exception raised when placing a wall obstructs a player's path to victory. *)
-exception BlockedPath
+exception GameIsBlocked
 
 (** Exception raised when a player attempts to place a wall without any remaining walls available. *)
 exception OutOfWalls
@@ -235,9 +235,7 @@ let execute_action (game : t) (act : action) : bool =
       with _ -> false)
 
 (** Switch the player turn. *)
-let switch_player (game : t) : unit =
-  game.to_play <-
-    (match game.to_play with PlayerA -> PlayerB | PlayerB -> PlayerA)
+let switch_player (game : t) : unit = game.to_play <- swap_player game.to_play
 
 (** Generate the list of all VALID actions. *)
 let generate_actions (game : t) : action list =

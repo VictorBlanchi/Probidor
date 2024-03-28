@@ -11,3 +11,10 @@
   (:standard -warn-error +A))
  (modules sockets_tests)
  (libraries sockets qcheck-core qcheck-core.runner))
+
+(test
+ (name state_tests)
+ (flags
+  (:standard -warn-error +A))
+ (modules state_tests)
+  (libraries quoridor qcheck-core qcheck-core.runner))
