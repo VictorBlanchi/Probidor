@@ -1,63 +1,71 @@
-(*(* This file defines the HTTP protocol that the engine (server) and
-     players (clients) use to communicate. *)
+(* This file defines the protocol that the engine (server) and
+     players (clients) use to communicate (via sockets). *)
+open Quoridor
 
-  (** The directions a pawn can move in. *)
-  type direction = N | NW | W | SW | S | SE | E | NE
+type move = MovePawn of State.direction | PlaceWall of Board.wall
 
-  (** The orientation of a wall. *)
-  type orientation = Vertical | Horizontal
+(** The type of requests players send to the engine. *)
+type request =
+  | NewPlayer
+      (** This is the first message a player sends to the engine.
+          As for now this is not strictly necessary, but in the future the 
+          player might ask stuff to the engine here (e.g. ask to start first/second).
+          The engine will answer with the game info and pawn position for the player. *)
+  | DoMove of move
+      (** Ask to do a given move. The engine will answer with an error if the move is invalid.
+          Otherwise the engine will answer with the opponent's move, or with Win. *)
+  | ValidMoves
+      (** Ask for the list of all valid moves the player can make. 
+          The player can expect an immediate response to this request. *)
 
-  (** The type of requests players send to the engine. *)
-  type request =
-    | NewPlayer
-        (** This is the first message a player sends to the engine.
-        The engine will answer with the game info (board size & wall count), and player identifier. *)
-    | MovePawn of { player : int; dir : direction }  (** Move the pawn. *)
-    | PlaceWall of { player : int; orient : orientation; row : int; col : int }
-        (** Place a wall. *)
+(** The type of responses the engine sends to players. *)
+type response =
+  | Welcome of
+      { rows : int
+      ; cols : int
+      ; wall_count : int
+      ; wall_length : int
+      ; pawn_pos : Board.pos
+      }
+      (** Give a player the information about the current game, 
+          and tell him whether he is first or second to play. *)
+  | OpponentMove of move  (** Tell what move the opponent made. *)
+  | YouWon  (** You won. *)
+  | MoveList of move list  (** Answer with a list of moves. *)
+  | OpponentWon of move  (** The opponent made the given move and won. *)
+  | Error of string  (** The request gave an error. *)
 
-  (** The type of responses the engine sends to players. *)
-  type response =
-    | Welcome of { player : int; rows : int; cols : int; wall_count : int }
-        (** Give a player it's identifier and the information about the current game. *)
-    | Ok  (** Just acknowledge the request. *)
-    | Error of string  (** The request gave an error. *)
+let direction_to_string (dir : State.direction) : string =
+  match dir with
+  | N -> "n"
+  | NW -> "nw"
+  | W -> "w"
+  | SW -> "sw"
+  | S -> "s"
+  | SE -> "se"
+  | E -> "e"
+  | NE -> "ne"
 
-  let direction_to_string (dir : direction) : string =
-    match dir with
-    | N -> "n"
-    | NW -> "nw"
-    | W -> "w"
-    | SW -> "sw"
-    | S -> "s"
-    | SE -> "se"
-    | E -> "e"
-    | NE -> "ne"
+let direction_from_string (dir : string) : State.direction =
+  match dir with
+  | "n" -> N
+  | "nw" -> NW
+  | "w" -> W
+  | "sw" -> SW
+  | "s" -> S
+  | "se" -> SE
+  | "e" -> E
+  | "ne" -> NE
+  | _ -> raise (Invalid_argument "direction_from_string")
 
-  let direction_from_string (dir : string) : direction =
-    match dir with
-    | "n" -> N
-    | "nw" -> NW
-    | "w" -> W
-    | "sw" -> SW
-    | "s" -> S
-    | "se" -> SE
-    | "e" -> E
-    | "ne" -> NE
-    | _ -> raise (Invalid_argument "direction_from_string")
+(** Parse a move from Json.
+     Raises [Yojson.Basic.Util.Type_error] on invalid input. *)
+let decode_move (_json : Yojson.Basic.t) : (move, exn) Result.t =
+  failwith "hello"
 
-  let orientation_to_string (orient : orientation) : string =
-    match orient with Vertical -> "vertical" | Horizontal -> "horizontal"
-
-  let orientation_from_string (orient : string) : orientation =
-    match orient with
-    | "vertical" -> Vertical
-    | "horizontal" -> Horizontal
-    | _ -> raise (Invalid_argument "orientation_from_string")
-
-  (** Parse a request from Json.
+(** Parse a request from Json.
       Raises [Yojson.Basic.Util.Type_error] on invalid input. *)
-  let decode_request (json : Yojson.Basic.t) : request =
+(*let decode_request (json : Yojson.Basic.t) : request =
     let open Yojson.Basic.Util in
     let action = json |> member "action" |> to_string in
     match action with
