@@ -1,20 +1,15 @@
 type pos = int * int
-
-type wall = {horizontal: bool; length: int; pos: pos}
+type wall = { horizontal : bool; length : int; pos : pos }
 
 exception Wall_out_of_bounds
-
 exception Wall_overlap
-
 exception Wall_missing
 
 module Vertex : Graph.Sig.COMPARABLE with type t = pos = struct
   type t = pos
 
   let compare = compare
-
   let hash = Hashtbl.hash
-
   let equal = ( = )
 end
 
@@ -26,12 +21,10 @@ module Dfs = Graph.Traverse.Dfs (Grph)
     The vertices of the graph represent the cells of the board,
     and the edges represent the valid moves between adjacent cells.
     In particular adding a wall involves removing edges from the graph. *)
-type t = {graph: Grph.t; rows: int; columns: int}
+type t = { graph : Grph.t; rows : int; columns : int }
 
 let rows board = board.rows
-
 let columns board = board.columns
-
 let add_pos (p1 : pos) (p2 : pos) : pos = (fst p1 + fst p2, snd p1 + snd p2)
 
 (** Create a graph in the shape of a matrix of size rows * columns
@@ -41,16 +34,16 @@ let lattice_graph ~rows ~columns : Grph.t =
   for i = 0 to rows - 1 do
     for j = 0 to columns - 1 do
       (* Add the vertex. *)
-      Grph.add_vertex graph (i, j) ;
+      Grph.add_vertex graph (i, j);
       (* Add the edges incident to this vertex. Remember the graph is undirected. *)
-      if i > 0 then Grph.add_edge graph (i, j) (i - 1, j) ;
+      if i > 0 then Grph.add_edge graph (i, j) (i - 1, j);
       if j > 0 then Grph.add_edge graph (i, j) (i, j - 1)
     done
-  done ;
+  done;
   graph
 
 let make ~rows ~columns : t =
-  {graph= lattice_graph ~rows ~columns; rows; columns}
+  { graph = lattice_graph ~rows ~columns; rows; columns }
 
 let wall_edges wall : (pos * pos) list =
   let i, j = wall.pos in
@@ -77,8 +70,8 @@ let add_wall board wall =
     (* Check the new wall won't overlap an existing wall. *)
     List.iter
       (fun (p1, p2) ->
-        if not (Grph.mem_edge board.graph p1 p2) then raise Wall_overlap )
-      edges ;
+        if not (Grph.mem_edge board.graph p1 p2) then raise Wall_overlap)
+      edges;
     (* Place the wall. *)
     List.iter (fun (p1, p2) -> Grph.remove_edge board.graph p1 p2) edges
 
@@ -90,8 +83,8 @@ let remove_wall board wall =
     (* Check we are removing a wall that exists indeed. *)
     List.iter
       (fun (p1, p2) ->
-        if Grph.mem_edge board.graph p1 p2 then raise Wall_missing )
-      edges ;
+        if Grph.mem_edge board.graph p1 p2 then raise Wall_missing)
+      edges;
     (* Remove the wall. *)
     List.iter (fun (p1, p2) -> Grph.add_edge board.graph p1 p2) edges
 
@@ -102,7 +95,7 @@ let reachable board start pred =
   try
     Dfs.iter_component
       ?pre:(Some (fun pos -> if pred pos then raise Found))
-      board.graph start ;
+      board.graph start;
     false
   with Found -> true
 
@@ -113,12 +106,12 @@ let generate_walls board length_wall =
     List.concat
       (List.init board.rows (fun i ->
            List.init board.columns (fun j ->
-               {horizontal= true; length= length_wall; pos= (i, j)} ) ) )
+               { horizontal = true; length = length_wall; pos = (i, j) })))
   in
   let wall_vert =
     List.concat
       (List.init board.rows (fun i ->
            List.init board.columns (fun j ->
-               {horizontal= false; length= length_wall; pos= (i, j)} ) ) )
+               { horizontal = false; length = length_wall; pos = (i, j) })))
   in
   List.append wall_hor wall_vert

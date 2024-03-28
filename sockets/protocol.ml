@@ -1,8 +1,6 @@
 (* This file defines the protocol that the engine (server) and
-     players (clients) use to communicate (via sockets). *)
+     players (clients) use to communicate via sockets. *)
 open Quoridor
-
-type move = MovePawn of State.direction | PlaceWall of Board.wall
 
 (** The type of requests players send to the engine. *)
 type request =
@@ -11,11 +9,11 @@ type request =
           As for now this is not strictly necessary, but in the future the 
           player might ask stuff to the engine here (e.g. ask to start first/second).
           The engine will answer with the game info and pawn position for the player. *)
-  | DoMove of move
-      (** Ask to do a given move. The engine will answer with an error if the move is invalid.
-          Otherwise the engine will answer with the opponent's move, or with Win. *)
-  | ValidMoves
-      (** Ask for the list of all valid moves the player can make. 
+  | DoAction of State.action
+      (** Ask to do a given action. The engine will answer with an error if the action is invalid.
+          Otherwise the engine will answer with the opponent's action, or with Win. *)
+  | ValidActions
+      (** Ask for the list of all valid actions the player can make. 
           The player can expect an immediate response to this request. *)
 
 (** The type of responses the engine sends to players. *)
@@ -25,29 +23,93 @@ type response =
       ; cols : int
       ; wall_count : int
       ; wall_length : int
-      ; pawn_pos : Board.pos
+      ; your_pawn : Board.pos
+      ; opp_pawn : Board.pos
+      ; you_start : bool
       }
       (** Give a player the information about the current game, 
-          and tell him whether he is first or second to play. *)
-  | OpponentMove of move  (** Tell what move the opponent made. *)
-  | YouWon  (** You won. *)
-  | MoveList of move list  (** Answer with a list of moves. *)
-  | OpponentWon of move  (** The opponent made the given move and won. *)
-  | Error of string  (** The request gave an error. *)
+          and whether he is first or second to play. *)
+  | OppAction of { action : State.action; win : bool }
+      (** Tell what action the opponent made, and whether this action made him win. *)
+  | YouWin  (** You won. *)
+  | ActionList of State.action list  (** Answer with a list of actions. *)
+  | Error of string  (** Invalid request : explain why. *)
 
-let direction_to_string (dir : State.direction) : string =
-  match dir with
-  | N -> "n"
-  | NW -> "nw"
-  | W -> "w"
-  | SW -> "sw"
-  | S -> "s"
-  | SE -> "se"
-  | E -> "e"
-  | NE -> "ne"
+(********************************************************************)
+(** Encoding to JSON. *)
 
-let direction_from_string (dir : string) : State.direction =
-  match dir with
+let encode_direction (dir : State.direction) : Yojson.Basic.t =
+  let str =
+    match dir with
+    | N -> "n"
+    | NW -> "nw"
+    | W -> "w"
+    | SW -> "sw"
+    | S -> "s"
+    | SE -> "se"
+    | E -> "e"
+    | NE -> "ne"
+  in
+  `String str
+
+let encode_pos ((i, j) : Board.pos) : Yojson.Basic.t =
+  `Assoc [ ("row", `Int i); ("col", `Int j) ]
+
+let encode_wall (wall : Board.wall) : Yojson.Basic.t =
+  `Assoc
+    [ ("horizontal", `Bool wall.horizontal)
+    ; ("length", `Int wall.length)
+    ; ("pos", encode_pos wall.pos)
+    ]
+
+let encode_action (act : State.action) : Yojson.Basic.t =
+  match act with
+  | MovePawn dir ->
+      `Assoc [ ("action", `String "move-pawn"); ("dir", encode_direction dir) ]
+  | PlaceWall wall ->
+      `Assoc [ ("action", `String "place-wall"); ("wall", encode_wall wall) ]
+
+let encode_request (req : request) : Yojson.Basic.t =
+  match req with
+  | NewPlayer -> `Assoc [ ("request", `String "new-player") ]
+  | DoAction act ->
+      `Assoc [ ("request", `String "do-action"); ("action", encode_action act) ]
+  | ValidActions -> `Assoc [ ("request", `String "valid-actions") ]
+
+let encode_response (resp : response) : Yojson.Basic.t =
+  match resp with
+  | Welcome info ->
+      `Assoc
+        [ ("response", `String "welcome")
+        ; ("rows", `Int info.rows)
+        ; ("cols", `Int info.cols)
+        ; ("wall-count", `Int info.wall_count)
+        ; ("wall-length", `Int info.wall_length)
+        ; ("your-pawn", encode_pos info.your_pawn)
+        ; ("opp-pawn", encode_pos info.opp_pawn)
+        ; ("you-start", `Bool info.you_start)
+        ]
+  | OppAction { action; win } ->
+      `Assoc
+        [ ("response", `String "opp-action")
+        ; ("action", encode_action action)
+        ; ("win", `Bool win)
+        ]
+  | YouWin -> `Assoc [ ("response", `String "you-win") ]
+  | ActionList acts ->
+      `Assoc
+        [ ("response", `String "action-list")
+        ; ("actions", `List (List.map encode_action acts))
+        ]
+  | Error err -> `Assoc [ ("response", `String "error"); ("msg", `String err) ]
+
+(********************************************************************)
+(** Parsing from JSON.
+    These functions raise [Yojson.Basic.Util.Type_error] on invalid input. *)
+
+let decode_direction (json : Yojson.Basic.t) : State.direction =
+  let open Yojson.Basic.Util in
+  match json |> to_string with
   | "n" -> N
   | "nw" -> NW
   | "w" -> W
@@ -56,83 +118,66 @@ let direction_from_string (dir : string) : State.direction =
   | "se" -> SE
   | "e" -> E
   | "ne" -> NE
-  | _ -> raise (Invalid_argument "direction_from_string")
+  | _ -> raise @@ Yojson.Basic.Util.Type_error ("Invalid direction", json)
 
-(** Parse a move from Json.
-     Raises [Yojson.Basic.Util.Type_error] on invalid input. *)
-let decode_move (_json : Yojson.Basic.t) : (move, exn) Result.t =
-  failwith "hello"
+let decode_pos (json : Yojson.Basic.t) : Board.pos =
+  let open Yojson.Basic.Util in
+  let i = json |> member "row" |> to_int in
+  let j = json |> member "col" |> to_int in
+  (i, j)
 
-(** Parse a request from Json.
-      Raises [Yojson.Basic.Util.Type_error] on invalid input. *)
-(*let decode_request (json : Yojson.Basic.t) : request =
-    let open Yojson.Basic.Util in
-    let action = json |> member "action" |> to_string in
-    match action with
-    | "new-player" -> NewPlayer
-    | "move-pawn" ->
-        let player = json |> member "player" |> to_int in
-        let dir = json |> member "dir" |> to_string |> direction_from_string in
-        MovePawn { player; dir }
-    | "place-wall" ->
-        let player = json |> member "player" |> to_int in
-        let orient =
-          json |> member "orient" |> to_string |> orientation_from_string
-        in
-        let row = json |> member "row" |> to_int in
-        let col = json |> member "col" |> to_int in
-        PlaceWall { player; orient; row; col }
-    | _ -> raise (Type_error ("Invalid request format", json))
+let decode_wall (json : Yojson.Basic.t) : Board.wall =
+  let open Yojson.Basic.Util in
+  let horizontal = json |> member "horizontal" |> to_bool in
+  let length = json |> member "length" |> to_int in
+  let pos = json |> member "pos" |> decode_pos in
+  { horizontal; length; pos }
 
-  (** Encode a request as a Json object.
-      This should be the exact inverse of decode_request. *)
-  let encode_request (req : request) : Yojson.Basic.t =
-    match req with
-    | NewPlayer -> `Assoc [ ("action", `String "new-player") ]
-    | MovePawn i ->
-        `Assoc
-          [ ("action", `String "move-pawn")
-          ; ("player", `Int i.player)
-          ; ("dir", `String (direction_to_string i.dir))
-          ]
-    | PlaceWall i ->
-        `Assoc
-          [ ("action", `String "place-wall")
-          ; ("player", `Int i.player)
-          ; ("orient", `String (orientation_to_string i.orient))
-          ; ("row", `Int i.row)
-          ; ("col", `Int i.col)
-          ]
+let decode_action (json : Yojson.Basic.t) : State.action =
+  let open Yojson.Basic.Util in
+  match json |> member "action" |> to_string with
+  | "move-pawn" ->
+      let dir = json |> member "dir" |> decode_direction in
+      MovePawn dir
+  | "place-wall" ->
+      let wall = json |> member "wall" |> decode_wall in
+      PlaceWall wall
+  | _ -> raise @@ Yojson.Basic.Util.Type_error ("Invalid action type.", json)
 
-  (** Encode a response as a status code and a json object. *)
-  let encode_response (resp : response) : Cohttp.Code.status_code * Yojson.Basic.t
-      =
-    match resp with
-    | Ok -> (`OK, `Null)
-    | Error err -> (`Bad_request, `String err)
-    | Welcome i ->
-        ( `OK
-        , `Assoc
-            [ ("player", `Int i.player)
-            ; ("rows", `Int i.rows)
-            ; ("cols", `Int i.cols)
-            ; ("wall-count", `Int i.wall_count)
-            ] )
+let decode_request (json : Yojson.Basic.t) : request =
+  let open Yojson.Basic.Util in
+  match json |> member "request" |> to_string with
+  | "new-player" -> NewPlayer
+  | "do-action" ->
+      let act = json |> member "action" |> decode_action in
+      DoAction act
+  | "valid-actions" -> ValidActions
+  | _ -> raise @@ Yojson.Basic.Util.Type_error ("Invalid request type.", json)
 
-  (** Raises [Yojson.Basic.Util.Type_error] on invalid input. *)
-  let decode_response (status_code : Cohttp.Code.status_code)
-      (json : Yojson.Basic.t) : response =
-    let open Yojson.Basic.Util in
-    match (status_code, json) with
-    | `Bad_request, _ ->
-        let err = json |> to_string in
-        Error err
-    | `OK, `Null -> Ok
-    | `OK, json ->
-        let player = json |> member "player" |> to_int in
-        let rows = json |> member "rows" |> to_int in
-        let cols = json |> member "cols" |> to_int in
-        let wall_count = json |> member "wall-count" |> to_int in
-        Welcome { player; rows; cols; wall_count }
-    | _, json -> raise (Type_error ("Invalid response format", json))
-*)
+let decode_response (json : Yojson.Basic.t) : response =
+  let open Yojson.Basic.Util in
+  match json |> member "response" |> to_string with
+  | "welcome" ->
+      let rows = json |> member "rows" |> to_int in
+      let cols = json |> member "cols" |> to_int in
+      let wall_count = json |> member "wall-count" |> to_int in
+      let wall_length = json |> member "wall-length" |> to_int in
+      let your_pawn = json |> member "your-pawn" |> decode_pos in
+      let opp_pawn = json |> member "opp-pawn" |> decode_pos in
+      let you_start = json |> member "you-start" |> to_bool in
+      Welcome
+        { rows; cols; wall_count; wall_length; your_pawn; opp_pawn; you_start }
+  | "opp-action" ->
+      let action = json |> member "action" |> decode_action in
+      let win = json |> member "win" |> to_bool in
+      OppAction { action; win }
+  | "you-win" -> YouWin
+  | "action-list" ->
+      let actions =
+        json |> member "actions" |> to_list |> List.map decode_action
+      in
+      ActionList actions
+  | "error" ->
+      let msg = json |> member "msg" |> to_string in
+      Error msg
+  | _ -> raise @@ Yojson.Basic.Util.Type_error ("Invalid response type.", json)

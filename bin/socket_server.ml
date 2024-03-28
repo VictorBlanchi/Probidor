@@ -26,10 +26,10 @@ let handle_connections (conns : connection list) : unit Lwt.t =
       fun (ic, oc) ->
         let* msg = Lwt_io.read_line_opt ic in
         match msg with
-        | None ->
-            let* () = Lwt_io.printl "client connection dropped" in
-            Lwt_io.write_line oc "closed"
-        | Some msg -> Lwt_io.write_line oc msg
+        | None -> Lwt_io.printl "Client connection dropped."
+        | Some msg ->
+            let* () = Lwt_io.printf "Received message: %s\n" msg in
+            Lwt_io.write_line oc msg
     end
     conns
 
@@ -74,7 +74,7 @@ let rec accept_connections socket n : connection list Lwt.t =
       in
       accept_connections socket n
 
-(** A server that accepts a single connection. *)
+(** A server that accepts connections. *)
 let create_server ?(addr = Unix.inet6_addr_loopback) ?(port = 8000) () :
     unit Lwt.t =
   let* socket = create_socket addr port in
