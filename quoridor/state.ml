@@ -176,15 +176,12 @@ let decrement_walls (game : t) : unit =
 let move_pawn_valid (game : t) (d : direction) : Board.pos option =
   match d with
   | (N | E | S | W) as d ->
-      if (* Check if the position located at direction d from the active player is both in the board and free *)
-         is_free game [ d ]
-      then
-        if (* Check there is no wall preventing the active player to move *)
-           can_pass game [ d ]
-        then Some (target_pos game [ d ])
-        else None
+      if is_free game [ d ] && can_pass game [ d ]
+      then Some (target_pos game [ d ])
       else if (* Maybe the other player is next to us and we can jump over him *)
-              is_free game [ d; d ] && can_pass game [ d; d ]
+              (not (is_free game [ d ]))
+              && is_free game [ d; d ]
+              && can_pass game [ d; d ]
       then Some (target_pos game [ d; d ])
       else None
   | (NE | SE | SW | NW) as d -> begin
@@ -192,18 +189,16 @@ let move_pawn_valid (game : t) (d : direction) : Board.pos option =
       then None
       else
         let d1, d2 = split_diag_dir d in
-        let is_valid d1 d2 =
+        let is_valid (d1 : direction) (d2 : direction) : bool =
           (* This function tests whether performing d1 then d2 is valid. *)
-          if (not (is_free game [ d1 ])) (* Inactive player at d1 from us *)
-             && can_pass game [ d1; d2 ]
-                (* No wall preventing to perform d1 d2 *)
-             && not (can_pass game [ d1; d1 ])
-             (* A wall preventing us to jump directly over the inactive player *)
-          then Some (target_pos game [ d1; d2 ])
-          else raise IllegalMove
+          (not (is_free game [ d1 ])) (* Inactive player at d1 from us *)
+          && can_pass game [ d1; d2 ] (* No wall preventing to perform d1 d2 *)
+          && not (can_pass game [ d1; d1 ])
+          (* A wall preventing us to jump directly over the inactive player *)
         in
-        try is_valid d1 d2
-        with IllegalMove -> ( try is_valid d2 d1 with IllegalMove -> None)
+        if is_valid d1 d2 || is_valid d2 d1
+        then Some (target_pos game [ d ])
+        else None
     end
 
 (** Check if the active player can place this wall. *)
