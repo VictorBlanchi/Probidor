@@ -6,6 +6,9 @@ exception BlockedPath
 (** Exception raised when a player attempts to place a wall without any remaining walls available. *)
 exception OutOfWalls
 
+(** Exception raised when a player attempts an invalid or illegal move. *)
+exception IllegalMove
+
 (** A tag identifying the two players.
     Player A starts on top of the board, and player B start at the bottom of the board. *)
 type player = PlayerA | PlayerB
@@ -67,6 +70,18 @@ let pos_from_dir (d : direction) : Board.pos =
   | SE -> (1, 1)
   | E -> (0, 1)
   | NE -> (-1, 1)
+
+(** [split_diag_dir d] splits a diagonal direction into its components.
+    Example:
+    - [split_diag_dir 'NW'] returns ('N', 'W') 
+    - [split_diag_dir 'N'] raise an assertion error. *)
+let split_diag_dir (d : direction) : direction * direction =
+  match d with
+  | N | W | S | E -> assert false
+  | NW -> (N, W)
+  | SW -> (S, W)
+  | SE -> (S, E)
+  | NE -> (N, E)
 
 (** Return the active player. *)
 let active_player (game : t) : player_data =
@@ -176,62 +191,19 @@ let move_pawn_valid (game : t) (d : direction) : Board.pos option =
       if not (is_free game [ d ])
       then None
       else
-        match d with
-        | NW ->
-            if (* Either the other player is at direction N or W of the active player *)
-               not (is_free game [ N ])
-            then
-              (* Inactive player is at the N of active player*)
-              if can_pass game [ N; W ]
-                 (* Active player can go at N then W *)
-                 && not (can_pass game [ N; N ])
-                 (* There is a wall preventing the active player to jump directly over the inactive player *)
-              then Some (target_pos game [ N; W ])
-              else None
-            else if not (is_free game [ W ])
-            then
-              (* Inactive player is at the W of active player *)
-              if can_pass game [ W; N ] && not (can_pass game [ W; W ])
-              then Some (target_pos game [ N; W ])
-              else None
-            else None
-        | SW ->
-            if not (is_free game [ S ])
-            then
-              if can_pass game [ S; W ] && not (can_pass game [ S; S ])
-              then Some (target_pos game [ S; W ])
-              else None
-            else if not (is_free game [ W ])
-            then
-              if can_pass game [ W; S ] && not (can_pass game [ W; W ])
-              then Some (target_pos game [ S; W ])
-              else None
-            else None
-        | SE ->
-            if not (is_free game [ S ])
-            then
-              if can_pass game [ S; E ] && not (can_pass game [ S; S ])
-              then Some (target_pos game [ S; E ])
-              else None
-            else if not (is_free game [ E ])
-            then
-              if can_pass game [ E; S ] && not (can_pass game [ E; E ])
-              then Some (target_pos game [ S; E ])
-              else None
-            else None
-        | NE ->
-            if not (is_free game [ N ])
-            then
-              if can_pass game [ N; E ] && not (can_pass game [ N; N ])
-              then Some (target_pos game [ N; E ])
-              else None
-            else if not (is_free game [ E ])
-            then
-              if can_pass game [ E; N ] && not (can_pass game [ E; E ])
-              then Some (target_pos game [ N; E ])
-              else None
-            else None
-        | _ -> assert false
+        let d1, d2 = split_diag_dir d in
+        let is_valid d1 d2 =
+          (* This function tests whether performing d1 then d2 is valid. *)
+          if (not (is_free game [ d1 ])) (* Inactive player at d1 from us *)
+             && can_pass game [ d1; d2 ]
+                (* No wall preventing to perform d1 d2 *)
+             && not (can_pass game [ d1; d1 ])
+             (* A wall preventing us to jump directly over the inactive player *)
+          then Some (target_pos game [ d1; d2 ])
+          else raise IllegalMove
+        in
+        try is_valid d1 d2
+        with IllegalMove -> ( try is_valid d2 d1 with IllegalMove -> None)
     end
 
 (** Check if the active player can place this wall. *)
