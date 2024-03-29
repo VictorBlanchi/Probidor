@@ -1,13 +1,13 @@
 (* This file defines the representation of the game's state used in the engine. *)
 
-(** Exception raised when placing a wall obstructs a player's path to victory. *)
-exception GameIsBlocked
-
 (** Exception raised when a player attempts to place a wall without any remaining walls available. *)
-exception OutOfWalls
+exception Out_of_walls
 
-(** Exception raised when a player attempts an invalid or illegal move. *)
-exception IllegalMove
+(* (\** Exception raised when placing a wall obstructs a player's path to victory. *\) *)
+(* exception Game_is_blocked *)
+
+(* (\** Exception raised when a player attempts an invalid or illegal move. *\) *)
+(* exception Illegal_move *)
 
 (** A tag identifying the two players.
     Player A starts on top of the board, and player B start at the bottom of the board. *)
@@ -91,12 +91,6 @@ let active_player (game : t) : player_data =
 let inactive_player (game : t) : player_data =
   match game.to_play with PlayerA -> game.player_B | PlayerB -> game.player_A
 
-(** The position of player A. *)
-let pos_A (game : t) : Board.pos = game.player_A.pawn_pos
-
-(** The position of player B. *)
-let pos_B (game : t) : Board.pos = game.player_B.pawn_pos
-
 (** The position of the active player. *)
 let pos_active (game : t) : Board.pos = (active_player game).pawn_pos
 
@@ -150,10 +144,10 @@ let win (game : t) : bool = win_pos game (pos_active game)
 (** A game is blocked if player A or player B are not able to win. *)
 let is_blocked (game : t) : bool =
   let able_to_win_A =
-    Board.reachable game.board (pos_A game) (win_pos_A game)
+    Board.reachable game.board game.player_A.pawn_pos (win_pos_A game)
   in
   let able_to_win_B =
-    Board.reachable game.board (pos_B game) (win_pos_B game)
+    Board.reachable game.board game.player_B.pawn_pos (win_pos_B game)
   in
   not (able_to_win_A && able_to_win_B)
 
@@ -166,14 +160,14 @@ let remaining_walls (game : t) : int =
 (** Decrement the number of remaining walls of the active player*)
 let decrement_walls (game : t) : unit =
   let m = remaining_walls game in
-  if m <= 0 then raise OutOfWalls;
+  if m <= 0 then raise Out_of_walls;
   match game.to_play with
   | PlayerA -> game.player_A.remaining_walls <- m - 1
   | PlayerB -> game.player_B.remaining_walls <- m - 1
 
 (** Check if moving the active player's pawn in the direction d is valid,
     and if yes return the new position of the pawn. *)
-let move_pawn_valid (game : t) (d : direction) : Board.pos option =
+let action_move_valid (game : t) (d : direction) : Board.pos option =
   match d with
   | (N | E | S | W) as d ->
       if is_free game [ d ] && can_pass game [ d ]
@@ -202,9 +196,9 @@ let move_pawn_valid (game : t) (d : direction) : Board.pos option =
     end
 
 (** Check if the active player can place this wall. *)
-let place_wall_valid (game : t) (w : Board.wall) : bool =
+let action_wall_valid (game : t) (w : Board.wall) : bool =
   try
-    if remaining_walls game <= 0 then raise OutOfWalls;
+    if remaining_walls game <= 0 then raise Out_of_walls;
     Board.add_wall game.board w;
     let game_is_blocked = is_blocked game in
     Board.remove_wall game.board w;
@@ -215,14 +209,14 @@ let place_wall_valid (game : t) (w : Board.wall) : bool =
 let execute_action (game : t) (act : action) : bool =
   match act with
   | MovePawn d -> (
-      match move_pawn_valid game d with
+      match action_move_valid game d with
       | Some p ->
           (active_player game).pawn_pos <- p;
           true
       | None -> false)
   | PlaceWall w -> (
       try
-        if remaining_walls game <= 0 then raise OutOfWalls;
+        if remaining_walls game <= 0 then raise Out_of_walls;
         Board.add_wall game.board w;
         let game_is_blocked = is_blocked game in
         if game_is_blocked
@@ -234,22 +228,19 @@ let execute_action (game : t) (act : action) : bool =
           true)
       with _ -> false)
 
-(** Switch the player turn. *)
-let switch_player (game : t) : unit = game.to_play <- swap_player game.to_play
-
 (** Generate the list of all VALID actions. *)
-let generate_actions (game : t) : action list =
+let valid_actions (game : t) : action list =
   let directions = [ N; NW; W; SW; S; SE; E; NE ] in
   let move_pawn =
     List.map
       (fun d -> MovePawn d)
       (List.filter
          (fun d ->
-           match move_pawn_valid game d with None -> false | Some _ -> true)
+           match action_move_valid game d with None -> false | Some _ -> true)
          directions)
   in
   let walls = Board.generate_walls game.board game.wall_length in
   let place_wall =
-    List.map (fun w -> PlaceWall w) (List.filter (place_wall_valid game) walls)
+    List.map (fun w -> PlaceWall w) (List.filter (action_wall_valid game) walls)
   in
   List.append move_pawn place_wall

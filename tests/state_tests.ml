@@ -27,17 +27,19 @@ let player_gen : player Gen.t = Gen.oneofl [ PlayerA; PlayerB ]
 
 let action_gen : action Gen.t =
   let open Gen_syntax in
-  let* move_pawn = Gen.bool in
-  if move_pawn
-  then
-    let* d = dir_gen in
-    return (MovePawn d)
-  else
-    let* w = wall_gen in
-    return (PlaceWall w)
+  Gen.oneof
+    [ begin
+        let* dir = dir_gen in
+        return @@ State.MovePawn dir
+      end
+    ; begin
+        let* wall = wall_gen in
+        return @@ State.PlaceWall wall
+      end
+    ]
 
 let valid_action_gen (game : t) : action Gen.t =
-  Gen.oneofl (generate_actions game)
+  Gen.oneofl @@ valid_actions game
 
 let new_game_gen : t Gen.t =
   let open Gen_syntax in
@@ -46,7 +48,7 @@ let new_game_gen : t Gen.t =
   let* w_count = Gen.small_nat in
   let* w_len = Gen.small_nat in
   let* to_play = player_gen in
-  return (make r ((2 * c) + 1) w_count w_len to_play)
+  return @@ make r ((2 * c) + 1) w_count w_len to_play
 
 (*************************************************************************************)
 (* Printers *)
@@ -57,7 +59,8 @@ let wall_print : Board.wall Print.t =
   let open Board in
   fun wall ->
     Format.sprintf "{ horizontal:%b; length:%d; pos:%s }" wall.horizontal
-      wall.length (pos_print wall.pos)
+      wall.length
+    @@ pos_print wall.pos
 
 let board_print : Board.t Print.t =
   let open Board in
