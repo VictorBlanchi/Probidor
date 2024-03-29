@@ -1,40 +1,47 @@
-(*open Cohttp
-  open Cohttp_lwt_unix
-  open Protocol
+open Lwt.Syntax
 
-  (** Get the URI of the server. *)
-  let server_uri ?(port = 8000) () : Uri.t =
-    Uri.of_string (Format.sprintf "http://localhost:%d/" port)
+(** One side of a connection : we can send and receive data. *)
+type connection = Lwt_io.input_channel * Lwt_io.output_channel
 
-  (** Make a single http request to the server.
-      Run this using Lwt_main.run. *)
-  let make_request (uri : Uri.t) (req : request) : response Lwt.t =
-    let open Lwt.Syntax in
-    (* Encode the request. *)
-    let req_body =
-      req |> encode_request |> Yojson.Basic.to_string |> Cohttp_lwt.Body.of_string
-    in
-    (* Send the request. *)
-    let* resp, resp_body = Client.post uri ~body:req_body in
-    (* Decode the response. *)
-    let resp_code = resp |> Response.status in
-    let* resp_body = resp_body |> Cohttp_lwt.Body.to_string in
-    try
-      let resp = decode_response resp_code (Yojson.Basic.from_string resp_body) in
-      Lwt.return resp
-    with Yojson.Basic.Util.Type_error (msg, json) ->
-      (* We couldn't decode the server response : raise an exception. *)
-      let err =
-        Format.sprintf
-          "Failed to decode server response.\n\
-           Response code: %d\n\
-           Response body:\n\
-           %s\n\
-           Error: %s\n\
-           %s\n"
-          (Code.code_of_status resp_code)
-          resp_body msg
-          (Yojson.Basic.pretty_to_string json)
+exception Connection_closed
+
+(** Create a client-side socket and connect to the server. *)
+let connect ?(addr = Unix.inet6_addr_loopback) ?(port = 8000) : connection Lwt.t
+    =
+  (* Create a socket with an IPV6 address. *)
+  let socket = Lwt_unix.socket PF_INET6 SOCK_STREAM 0 in
+  (* Make sure we can reuse the same socket several times. *)
+  Lwt_unix.setsockopt socket Unix.SO_REUSEADDR true;
+  (* Connect to the server. *)
+  let* () = Lwt_unix.connect socket (ADDR_INET (addr, port)) in
+  let ic = Lwt_io.of_fd ~mode:Lwt_io.Input socket in
+  let oc = Lwt_io.of_fd ~mode:Lwt_io.Output socket in
+  Lwt.return (ic, oc)
+
+let send_request (conn : connection) (req : Protocol.request) :
+    Protocol.response Lwt.t =
+  let ic, oc = conn in
+  (* Encode the request. *)
+  let req_str = req |> Protocol.encode_request |> Yojson.Basic.to_string in
+  (* Send the request. *)
+  let* () = Lwt_io.write_line oc req_str in
+  (* Wait for the response. *)
+  let* resp_str = Lwt_io.read_line_opt ic in
+  match resp_str with
+  | None ->
+      (* The connection was closed by the server. *)
+      raise Connection_closed
+  | Some resp_str ->
+      (* Decode the response. *)
+      let resp =
+        resp_str |> Yojson.Basic.from_string |> Protocol.decode_response
       in
-      raise (Failure err)
-*)
+      Lwt.return resp
+
+(** A client that connects to the server. *)
+(*let create_client ?(addr = Unix.inet6_addr_loopback) ?(port = 8000) () :
+    unit Lwt.t =
+  let* ic, oc = connect addr port in
+  let* () = Lwt_io.write_line oc "hello from the client" in
+  let* msg = Lwt_io.read_line_opt ic in
+  match msg with None -> Lwt.return () | Some msg -> Lwt_io.printl msg*)
