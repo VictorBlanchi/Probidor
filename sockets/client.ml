@@ -6,8 +6,8 @@ type connection = Lwt_io.input_channel * Lwt_io.output_channel
 exception Connection_closed
 
 (** Create a client-side socket and connect to the server. *)
-let connect ?(addr = Unix.inet6_addr_loopback) ?(port = 8000) : connection Lwt.t
-    =
+let connect ?(addr = Unix.inet6_addr_loopback) ?(port = 8000) () :
+    connection Lwt.t =
   (* Create a socket with an IPV6 address. *)
   let socket = Lwt_unix.socket PF_INET6 SOCK_STREAM 0 in
   (* Make sure we can reuse the same socket several times. *)
