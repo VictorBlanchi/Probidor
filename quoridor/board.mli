@@ -52,8 +52,7 @@ val remove_wall : t -> wall -> unit
     where the destination is specified as a predicate on positions. *)
 val reachable : t -> pos -> (pos -> bool) -> bool
 
-(** Test if the position are in the board, and if there exist an edge between them.
-    This means that the position are adjacent and there are no wall between them. *)
+(** Test if the positions are in the board, if they are adjacent and if there are no wall between them. *)
 val exist_edge : t -> pos -> pos -> bool
 
 (** Generate a list of all possible walls of size length *)

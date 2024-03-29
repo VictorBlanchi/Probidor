@@ -112,8 +112,7 @@ let tests =
       begin
         fun (game, action) ->
           try
-            if not (execute_action game action)
-            then failwith "Execute action failed on valid action";
+            execute_action game action;
             true
           with _ -> false
       end
