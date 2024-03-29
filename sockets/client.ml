@@ -34,7 +34,7 @@ let send_request (conn : connection) (req : Protocol.request) :
   let* () = Lwt_io.write_line oc req_str in
   (* Wait for the response. *)
   let* resp_str =
-    try Lwt_io.read_line_opt ic
+    try%lwt Lwt_io.read_line_opt ic
     with Unix.Unix_error (Unix.ECONNRESET, _, _) -> raise Connection_closed
   in
   (* Decode the response. *)
