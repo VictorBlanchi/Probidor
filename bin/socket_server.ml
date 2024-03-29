@@ -3,9 +3,6 @@ open Lwt.Syntax
 (** One side of a connection : we can send and receive data. *)
 type connection = Lwt_io.input_channel * Lwt_io.output_channel
 
-(*let send_response conn (resp : Protocol.response) : unit Lwt.t = _
-  let read_request conn : Protocol.request option Lwt.t = _*)
-
 (** Create a server-side socket. *)
 let create_socket addr port =
   (* Create a socket with an IPV6 address. *)
@@ -19,19 +16,24 @@ let create_socket addr port =
   Lwt.return socket
 
 (** Handle a connection. *)
-let handle_connections (conns : connection list) : unit Lwt.t =
+let handle_connections (_conns : connection list) : unit Lwt.t =
   let* () = Lwt_io.printl "Connection started." in
-  Lwt_list.iter_p
-    begin
-      fun (ic, oc) ->
-        let* msg = Lwt_io.read_line_opt ic in
-        match msg with
-        | None -> Lwt_io.printl "Client connection dropped."
-        | Some msg ->
-            let* () = Lwt_io.printf "Received message: %s\n" msg in
-            Lwt_io.write_line oc msg
-    end
-    conns
+  exit 0
+(*Lwt_list.iter_p
+  begin
+    fun (ic, _oc) ->
+      let* msg = Lwt_io.read_line_opt ic in
+      match msg with
+      | None -> Lwt_io.printl "Client connection dropped."
+      | Some msg ->
+          let* () = Lwt_io.printf "Received message: %s\n" msg in
+          (*let resp =
+              YouWin |> Protocol.encode_response |> Yojson.Basic.to_string
+            in
+            Lwt_io.write_line oc resp*)
+          exit 0
+  end
+  conns*)
 
 (** Turn a socket address into a string. *)
 let string_of_socketaddr addr : string =
@@ -78,7 +80,7 @@ let rec accept_connections socket n : connection list Lwt.t =
 let create_server ?(addr = Unix.inet6_addr_loopback) ?(port = 8000) () :
     unit Lwt.t =
   let* socket = create_socket addr port in
-  let* conns = accept_connections socket 2 in
+  let* conns = accept_connections socket 1 in
   handle_connections conns
 
 let () = Lwt_main.run (create_server ())

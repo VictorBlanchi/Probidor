@@ -2,12 +2,12 @@
  (public_name socket_client)
  (flags
   (:standard -warn-error +A))
- (libraries lwt lwt.unix)
+ (libraries lwt lwt.unix sockets)
  (modules socket_client))
 
 (executable
  (public_name socket_server)
  (flags
   (:standard -warn-error +A))
- (libraries lwt lwt.unix)
+ (libraries lwt lwt.unix sockets)
  (modules socket_server))
