@@ -2,4 +2,6 @@
  (name sockets)
  (flags
   (:standard -warn-error +A))
- (libraries lwt lwt.unix quoridor yojson))
+ (libraries lwt lwt.unix lwt_ppx quoridor yojson)
+ (preprocess
+  (pps lwt_ppx)))
