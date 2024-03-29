@@ -12,3 +12,6 @@ val connect : ?addr:Unix.inet_addr -> ?port:int -> unit -> connection Lwt.t
 (** Send a request to the server, and wait for a response. 
     Raises [Connection_closed] if the server closed the connection. *)
 val send_request : connection -> Protocol.request -> Protocol.response Lwt.t
+
+(** Close a connection. *)
+val close : connection -> unit
