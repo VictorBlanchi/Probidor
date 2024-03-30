@@ -1,34 +1,22 @@
 (* This file defines the representation of the game's state used in the engine. *)
 
-(** Type representing different illegal move scenarios in a game.
-
-    - [OutOfBound]: The attempted move is outside the bounds of the game board.
-    - [PlayerCollision]: Another player occupies the destination square.
-    - [WallCollision]: A wall obstructs the path of the player's movement.
-    - [NoPlayerToJumpOver]: There is no player to jump over for the attempted move.
-    - [NoWallForDiagonalMove]: There is no wall behind the opponent for a diagonal move.
-*)
+(** Type representing different illegal move scenarios in a game. *)
 type illegal_move =
-  | OutOfBound
-  | PlayerCollision
+  | OutOfBound  (** The move is outside the bounds of the board. *)
+  | PlayerCollision  (** Another player occupies the destination. *)
   | WallCollision
   | NoPlayerToJumpOver
   | NoWallForDiagonalMove
+      (** No wall behind the opponent for a diagonal move.*)
 
-(** Type representing different scenarios of illegal wall placement in a game.
-
-    - [OutOfWalls]: The player has no more walls available to place.
-    - [BlockGame]: Placing the wall would block the game, rendering it unplayable.
-    - [Forbidden]: The placement of the wall is forbidden by the board rules. *)
+(** Type representing different scenarios of illegal wall placement in a game.*)
 type illegal_wall_placement =
-  | OutOfWalls
+  | OutOfWalls  (** The player has no more walls available to place.*)
   | BlockGame
-  | Forbidden (* of Board.wall_error *)
+      (** Placing the wall would block the game, rendering it unplayable.*)
+  | Forbidden of Board.wall_error
 
-(** Type representing an illegal action in a game. It consists of two constructors:
-    
-    - [IllegalMove] : Represents an illegal move with details provided by the [illegal_move] type.
-    - [IllegalWall] : Represents an illegal wall placement with details provided by the [illegal_wall_placement] type. *)
+(** Type representing an illegal action in a game.*)
 type illegal_action =
   | IllegalMove of illegal_move
   | IllegalWall of illegal_wall_placement
@@ -181,10 +169,10 @@ let remaining_walls (game : t) : int =
   | PlayerA -> game.player_A.remaining_walls
   | PlayerB -> game.player_B.remaining_walls
 
-(** Decrement the number of remaining walls of the active player. Assert false if there is no more walls*)
+(** Decrement the number of remaining walls of the active player. Assert that there is at least a wall*)
 let decrement_walls (game : t) : unit =
   let m = remaining_walls game in
-  if m <= 0 then assert false;
+  assert (m <= 0);
   match game.to_play with
   | PlayerA -> game.player_A.remaining_walls <- m - 1
   | PlayerB -> game.player_B.remaining_walls <- m - 1
@@ -197,19 +185,26 @@ let action_move_valid (game : t) (d : direction) :
   match d with
   | (N | E | S | W) as d ->
       let* free_d = is_free game [ d ] in
-      if free_d && can_pass game [ d ]
-      then Result.return @@ target_pos game [ d ]
-      else
-        (* Maybe he other player is next to us: maybe we can jump over him *)
-        let* free_dd = is_free game [ d; d ] in
-        if free_dd && can_pass game [ d; d ]
-        then Result.return @@ target_pos game [ d; d ]
+      if free_d
+      then begin
+        if can_pass game [ d ]
+        then Result.return @@ target_pos game [ d ]
         else Result.fail WallCollision
+      end
+      else
+        (* The other player is next to us and maybe we can jump over him *)
+        let* free_dd = is_free game [ d; d ] in
+        if free_dd
+        then begin
+          if can_pass game [ d; d ]
+          then Result.return @@ target_pos game [ d; d ]
+          else Result.fail WallCollision
+        end
+        else Result.fail PlayerCollision
   | (NE | SE | SW | NW) as d -> begin
       let* free_d = is_free game [ d ] in
-      if not free_d
-      then Result.fail PlayerCollision
-      else
+      if free_d
+      then begin
         let d1, d2 = split_diag_dir d in
         let is_valid (d1 : direction) (d2 : direction) :
             (unit, illegal_move) Result.t =
@@ -233,6 +228,8 @@ let action_move_valid (game : t) (d : direction) :
             end
         in
         Result.return @@ target_pos game [ d ]
+      end
+      else Result.fail PlayerCollision
     end
 
 (** Check if the active player can place this wall. *)
@@ -241,9 +238,14 @@ let action_wall_valid (game : t) (w : Board.wall) :
   if remaining_walls game <= 0
   then Result.fail OutOfWalls
   else begin
-    Board.add_wall game.board w;
+    let open Result.Syntax in
+    let* () =
+      Result.map_error (fun e -> Forbidden e) (Board.add_wall game.board w)
+    in
     let game_is_blocked = is_blocked game in
-    Board.remove_wall game.board w;
+    let* () =
+      Result.map_error (fun e -> Forbidden e) (Board.remove_wall game.board w)
+    in
     if game_is_blocked then Result.fail BlockGame else Result.return ()
   end
 
@@ -265,12 +267,21 @@ let execute_action (game : t) (act : action) : (unit, illegal_action) Result.t =
           if remaining_walls game <= 0
           then Result.fail OutOfWalls
           else begin
-            Board.add_wall game.board w;
+            let open Result.Syntax in
+            let* () =
+              Result.map_error
+                (fun e -> Forbidden e)
+                (Board.add_wall game.board w)
+            in
             let game_is_blocked = is_blocked game in
             if game_is_blocked
-            then (
-              Board.remove_wall game.board w;
-              Result.fail BlockGame)
+            then
+              let* () =
+                Result.map_error
+                  (fun e -> Forbidden e)
+                  (Board.remove_wall game.board w)
+              in
+              Result.fail BlockGame
             else Result.return @@ decrement_walls game
           end
         end
