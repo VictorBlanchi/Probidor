@@ -42,7 +42,7 @@ let swap_player (p : player) : player =
 
 (** Create a new game. The number of columns has to be odd.
     Player A starts in the middle of the top row (0), and player B starts in the middle of the bottom row. *)
-let make rows columns wall_count wall_length to_play =
+let make ~rows ~columns ~wall_count ~wall_length ~to_play =
   if rows < 0
   then raise (Invalid_argument "rows")
   else if columns < 0 || columns mod 2 = 0

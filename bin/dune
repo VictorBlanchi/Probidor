@@ -11,3 +11,10 @@
   (:standard -warn-error +A))
  (libraries lwt lwt.unix sockets)
  (modules socket_server))
+
+(executable
+ (public_name engine)
+ (flags
+  (:standard -warn-error +A))
+ (libraries lwt sockets quoridor)
+ (modules engine))
