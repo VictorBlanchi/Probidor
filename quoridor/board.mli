@@ -12,12 +12,10 @@ type pos = int * int
     The position [pos] is the upper-left cell among those directly adjacent to the wall. *)
 type wall = { horizontal : bool; length : int; pos : pos }
 
+type wall_error
+
 (** The abstract type of boards. *)
 type t
-
-exception Wall_out_of_bounds
-exception Wall_overlap
-exception Wall_missing
 
 (* Get the size of a board. *)
 val rows : t -> int
@@ -39,14 +37,14 @@ val pos_in_board : t -> pos -> bool
 val wall_in_board : t -> wall -> bool
 
 (** Add a wall to the board.
-    Raises [Wall_out_of_bounds] if the wall placement is invalid.
-    Raises [Wall_overlap] if the wall would overlap with another. *)
-val add_wall : t -> wall -> unit
+    Raises [OutOfBound] if the wall placement is invalid.
+    Raises [Overlap] if the wall would overlap with another. *)
+val add_wall : t -> wall -> (unit, wall_error) Result.t
 
 (** Remove a wall from the board.
-    Raises [Wall_out_of_bounds] if the wall placement is invalid.
-    Raises [Wall_missing] if there is no wall here. *)
-val remove_wall : t -> wall -> unit
+    Raises [OutOfBound] if the wall placement is invalid.
+    Raises [Missing] if there is no wall here. *)
+val remove_wall : t -> wall -> (unit, wall_error) Result.t
 
 (** Test if there a path between two positions,
     where the destination is specified as a predicate on positions. *)

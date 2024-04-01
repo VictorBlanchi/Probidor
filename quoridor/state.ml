@@ -1,13 +1,25 @@
 (* This file defines the representation of the game's state used in the engine. *)
 
-(** Exception raised when a player attempts to place a wall without any remaining walls available. *)
-exception Out_of_walls
+(** Type representing different illegal move scenarios in a game. *)
+type illegal_move =
+  | OutOfBound  (** The move is outside the bounds of the board. *)
+  | PlayerCollision  (** Another player occupies the destination. *)
+  | WallCollision
+  | NoPlayerToJumpOver
+  | NoWallForDiagonalMove
+      (** No wall behind the opponent for a diagonal move.*)
 
-(** Exception raised when placing a wall obstructs a player's path to victory. *)
-exception Game_is_blocked
+(** Type representing different scenarios of illegal wall placement in a game.*)
+type illegal_wall_placement =
+  | OutOfWalls  (** The player has no more walls available to place.*)
+  | BlockGame
+      (** Placing the wall would block the game, rendering it unplayable.*)
+  | Forbidden of Board.wall_error
 
-(** Exception raised when a player attempts an invalid or illegal move. *)
-exception Illegal_move of string
+(** Type representing an illegal action in a game.*)
+type illegal_action =
+  | IllegalMove of illegal_move
+  | IllegalWall of illegal_wall_placement
 
 (** A tag identifying the two players.
     Player A starts on top of the board, and player B start at the bottom of the board. *)
@@ -102,13 +114,11 @@ let target_pos (game : t) (d : direction list) : Board.pos =
   List.fold_left Board.add_pos (pos_active game) (List.map pos_from_dir d)
 
 (** Check that the position the active player wants to reach is not occupied. Raised an error if the position does not exist in the board *)
-let is_free (game : t) (d : direction list) : bool =
+let is_free (game : t) (d : direction list) : (bool, illegal_move) Result.t =
   let p' = target_pos game d in
   if Board.pos_in_board game.board p'
-  then begin
-    p' <> pos_active game && p' <> pos_inactive game
-  end
-  else raise (Illegal_move "The target position does not exist in the board")
+  then Result.return (p' <> pos_active game && p' <> pos_inactive game)
+  else Result.fail OutOfBound
 
 (** Check that there is not wall preventing the active player to reach where he wants to go*)
 let can_pass (game : t) (dirs : direction list) : bool =
@@ -159,67 +169,122 @@ let remaining_walls (game : t) : int =
   | PlayerA -> game.player_A.remaining_walls
   | PlayerB -> game.player_B.remaining_walls
 
-(** Decrement the number of remaining walls of the active player*)
+(** Decrement the number of remaining walls of the active player. Assert that there is at least a wall*)
 let decrement_walls (game : t) : unit =
   let m = remaining_walls game in
-  if m <= 0 then raise Out_of_walls;
+  assert (m <= 0);
   match game.to_play with
   | PlayerA -> game.player_A.remaining_walls <- m - 1
   | PlayerB -> game.player_B.remaining_walls <- m - 1
 
 (** Check if moving the active player's pawn in the direction d is valid,
     and if yes return the new position of the pawn. *)
-let action_move_valid (game : t) (d : direction) : Board.pos =
+let action_move_valid (game : t) (d : direction) :
+    (Board.pos, illegal_move) Result.t =
+  let open Result.Syntax in
   match d with
   | (N | E | S | W) as d ->
-      if is_free game [ d ] && can_pass game [ d ]
-      then target_pos game [ d ]
-      else if (* Maybe he other player is next to us: maybe we can jump over him *)
-              (not (is_free game [ d ]))
-              && is_free game [ d; d ]
-              && can_pass game [ d; d ]
-      then target_pos game [ d; d ]
-      else raise @@ Illegal_move "A wall obstructs the path"
-  | (NE | SE | SW | NW) as d -> begin
-      if not (is_free game [ d ])
-      then raise @@ Illegal_move "Another player occupies that spot"
+      let* free_d = is_free game [ d ] in
+      if free_d
+      then begin
+        if can_pass game [ d ]
+        then Result.return @@ target_pos game [ d ]
+        else Result.fail WallCollision
+      end
       else
+        (* The other player is next to us and maybe we can jump over him *)
+        let* free_dd = is_free game [ d; d ] in
+        if free_dd
+        then begin
+          if can_pass game [ d; d ]
+          then Result.return @@ target_pos game [ d; d ]
+          else Result.fail WallCollision
+        end
+        else Result.fail PlayerCollision
+  | (NE | SE | SW | NW) as d -> begin
+      let* free_d = is_free game [ d ] in
+      if free_d
+      then begin
         let d1, d2 = split_diag_dir d in
-        let is_valid (d1 : direction) (d2 : direction) : bool =
+        let is_valid (d1 : direction) (d2 : direction) :
+            (unit, illegal_move) Result.t =
           (* This function tests whether performing d1 then d2 is valid. *)
-          (not (is_free game [ d1 ])) (* Inactive player at d1 from us *)
-          && can_pass game [ d1; d2 ] (* No wall preventing to perform d1 d2 *)
-          && not (can_pass game [ d1; d1 ])
+          let* free_d1 = is_free game [ d1 ] in
+          if free_d1
+          then Result.fail NoPlayerToJumpOver
+          else if (* Inactive player at d1 from us *)
+                  not @@ can_pass game [ d1; d2 ]
+          then Result.fail WallCollision
+          else if (* No wall preventing to perform d1 d2 *)
+                  can_pass game [ d1; d1 ]
+          then Result.fail NoWallForDiagonalMove
+          else Result.return ()
           (* A wall preventing us to jump directly over the inactive player *)
         in
-        if is_valid d1 d2 || is_valid d2 d1
-        then target_pos game [ d ]
-        else raise @@ Illegal_move "TODO"
+        let* () =
+          Result.one_of (is_valid d1 d2) (is_valid d2 d1)
+            begin
+              fun e1 e2 -> match e1 with NoPlayerToJumpOver -> e2 | _ -> e1
+            end
+        in
+        Result.return @@ target_pos game [ d ]
+      end
+      else Result.fail PlayerCollision
     end
 
 (** Check if the active player can place this wall. *)
-let action_wall_valid (game : t) (w : Board.wall) : bool =
-  try
-    if remaining_walls game <= 0 then raise Out_of_walls;
-    Board.add_wall game.board w;
+let action_wall_valid (game : t) (w : Board.wall) :
+    (unit, illegal_wall_placement) Result.t =
+  if remaining_walls game <= 0
+  then Result.fail OutOfWalls
+  else begin
+    let open Result.Syntax in
+    let* () =
+      Result.map_error (fun e -> Forbidden e) (Board.add_wall game.board w)
+    in
     let game_is_blocked = is_blocked game in
-    Board.remove_wall game.board w;
-    not game_is_blocked
-  with _ -> false
+    let* () =
+      Result.map_error (fun e -> Forbidden e) (Board.remove_wall game.board w)
+    in
+    if game_is_blocked then Result.fail BlockGame else Result.return ()
+  end
 
 (** Execute a given (valid) action. This modifies the state in place. *)
-let execute_action (game : t) (act : action) : unit =
+let execute_action (game : t) (act : action) : (unit, illegal_action) Result.t =
+  let open Result.Syntax in
   match act with
-  | MovePawn d -> (active_player game).pawn_pos <- action_move_valid game d
+  | MovePawn d ->
+      Result.map_error
+        (fun e -> IllegalMove e)
+        begin
+          let* new_pos = action_move_valid game d in
+          Result.return @@ ((active_player game).pawn_pos <- new_pos)
+        end
   | PlaceWall w ->
-      if remaining_walls game <= 0 then raise Out_of_walls;
-      Board.add_wall game.board w;
-      let game_is_blocked = is_blocked game in
-      if game_is_blocked
-      then (
-        Board.remove_wall game.board w;
-        raise Game_is_blocked)
-      else decrement_walls game
+      Result.map_error
+        (fun e -> IllegalWall e)
+        begin
+          if remaining_walls game <= 0
+          then Result.fail OutOfWalls
+          else begin
+            let open Result.Syntax in
+            let* () =
+              Result.map_error
+                (fun e -> Forbidden e)
+                (Board.add_wall game.board w)
+            in
+            let game_is_blocked = is_blocked game in
+            if game_is_blocked
+            then
+              let* () =
+                Result.map_error
+                  (fun e -> Forbidden e)
+                  (Board.remove_wall game.board w)
+              in
+              Result.fail BlockGame
+            else Result.return @@ decrement_walls game
+          end
+        end
 
 (** Generate the list of all VALID actions. *)
 let valid_actions (game : t) : action list =
@@ -228,15 +293,19 @@ let valid_actions (game : t) : action list =
     List.map
       (fun d -> MovePawn d)
       (List.filter
-         (fun d ->
-           try
-             ignore (action_move_valid game d);
-             true
-           with _ -> false)
+         begin
+           fun d -> Result.is_ok @@ action_move_valid game d
+         end
          directions)
   in
   let walls = Board.generate_walls game.board game.wall_length in
   let place_wall =
-    List.map (fun w -> PlaceWall w) (List.filter (action_wall_valid game) walls)
+    List.map
+      (fun w -> PlaceWall w)
+      (List.filter
+         begin
+           fun d -> Result.is_ok @@ action_wall_valid game d
+         end
+         walls)
   in
   List.append move_pawn place_wall

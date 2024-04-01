@@ -1,9 +1,6 @@
 type pos = int * int
 type wall = { horizontal : bool; length : int; pos : pos }
-
-exception Wall_out_of_bounds
-exception Wall_overlap
-exception Wall_missing
+type wall_error = OutOfBound | Overlap | Missing
 
 module Vertex : Graph.Sig.COMPARABLE with type t = pos = struct
   type t = pos
@@ -64,29 +61,37 @@ let wall_in_board board wall : bool =
 
 let add_wall board wall =
   if not (wall_in_board board wall)
-  then raise Wall_out_of_bounds
+  then Result.fail OutOfBound
   else
+    let exception Wall_overlap in
     let edges = wall_edges wall in
-    (* Check the new wall won't overlap an existing wall. *)
-    List.iter
-      (fun (p1, p2) ->
-        if not (Grph.mem_edge board.graph p1 p2) then raise Wall_overlap)
-      edges;
-    (* Place the wall. *)
-    List.iter (fun (p1, p2) -> Grph.remove_edge board.graph p1 p2) edges
+    try
+      (* Check the new wall won't overlap an existing wall. *)
+      List.iter
+        (fun (p1, p2) ->
+          if not (Grph.mem_edge board.graph p1 p2) then raise Wall_overlap)
+        edges;
+      (* Place the wall. *)
+      Result.return
+      @@ List.iter (fun (p1, p2) -> Grph.remove_edge board.graph p1 p2) edges
+    with Wall_overlap -> Result.fail Overlap
 
 let remove_wall board wall =
   if not (wall_in_board board wall)
-  then raise Wall_out_of_bounds
+  then Result.fail OutOfBound
   else
-    let edges = wall_edges wall in
-    (* Check we are removing a wall that exists indeed. *)
-    List.iter
-      (fun (p1, p2) ->
-        if Grph.mem_edge board.graph p1 p2 then raise Wall_missing)
-      edges;
-    (* Remove the wall. *)
-    List.iter (fun (p1, p2) -> Grph.add_edge board.graph p1 p2) edges
+    let exception Wall_missing in
+    try
+      let edges = wall_edges wall in
+      (* Check we are removing a wall that exists indeed. *)
+      List.iter
+        (fun (p1, p2) ->
+          if Grph.mem_edge board.graph p1 p2 then raise Wall_missing)
+        edges;
+      (* Remove the wall. *)
+      Result.return
+      @@ List.iter (fun (p1, p2) -> Grph.add_edge board.graph p1 p2) edges
+    with Wall_missing -> Result.fail Missing
 
 let reachable board start pred =
   (* To speed up the implementation, we use exceptions
