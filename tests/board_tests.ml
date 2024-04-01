@@ -72,7 +72,7 @@ let tests =
           try
             add_wall board wall;
             false
-          with Wall_out_of_bounds -> true
+          with WallOutOfBounds -> true
       end
   ; Test.make ~name:"remove_wall_not_in_board"
       ~print:(Print.pair wall_print board_print)
@@ -83,7 +83,7 @@ let tests =
           try
             remove_wall board wall;
             false
-          with Wall_out_of_bounds -> true
+          with WallOutOfBounds -> true
       end
   ; Test.make ~name:"add_wall"
       ~print:(Print.pair wall_print board_print)
@@ -103,7 +103,7 @@ let tests =
           try
             remove_wall board wall;
             false
-          with Wall_missing -> true
+          with WallMissing -> true
       end
   ; Test.make ~name:"add_remove_wall"
       ~print:(Print.pair wall_print board_print)
@@ -125,7 +125,7 @@ let tests =
             add_wall board wall;
             add_wall board wall;
             false
-          with Wall_overlap -> true
+          with WallOverlap -> true
       end
   ]
 
