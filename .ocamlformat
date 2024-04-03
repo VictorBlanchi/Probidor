@@ -10,6 +10,7 @@ space-around-arrays=true
 break-separators=before
 dock-collection-brackets=false
 space-around-records=true
+break-before-in=auto
 
 doc-comments=before
 margin=100
