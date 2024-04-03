@@ -9,7 +9,7 @@
 (package
  (name probidor)
  (synopsis
-  "A game engine, a GUI and several (artificial) players for the game Quoridor.")
+  "A game engine, a GUI and several (artificial) players for the game Quoridor")
  (depends
   (ocaml
    (>= 5.1.1))
@@ -29,7 +29,7 @@
    (>= 2.1.0))
   (qcheck-core
    (>= 0.21.3))
-  (ppx_derigin
+  (ppx_deriving
    (>= 5.2.1))))
 
 (generate_opam_files)
