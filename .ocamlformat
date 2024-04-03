@@ -12,3 +12,4 @@ dock-collection-brackets=false
 space-around-records=true
 
 doc-comments=before
+margin=100

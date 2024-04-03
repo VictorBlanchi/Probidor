@@ -6,16 +6,14 @@ type illegal_move =
   | PlayerCollision  (** Another player occupies the destination. *)
   | WallCollision
   | NoPlayerToJumpOver
-  | NoWallForDiagonalMove
-      (** No wall behind the opponent for a diagonal move.*)
+  | NoWallForDiagonalMove  (** No wall behind the opponent for a diagonal move.*)
 
 exception IllegalMove of illegal_move
 
 (** Type representing different scenarios of illegal wall placement in a game.*)
 type illegal_wall =
   | OutOfWalls  (** The player has no more walls available to place.*)
-  | BlocksGame
-      (** Placing the wall would block the game, rendering it unplayable.*)
+  | BlocksGame  (** Placing the wall would block the game, rendering it unplayable.*)
   | OutOfBounds  (** Part of the wall is out of bounds. *)
   | Overlap  (** The wall overlap with an existing wall. *)
 
@@ -34,8 +32,7 @@ type action =
   | PlaceWall of Board.wall  (** Place a wall for the current player. *)
 
 (** The game state specific to a player. *)
-type player_data =
-  { mutable pawn_pos : Board.pos; mutable remaining_walls : int }
+type player_data = { mutable pawn_pos : Board.pos; mutable remaining_walls : int }
 
 type t =
   { board : Board.t
@@ -49,8 +46,7 @@ type t =
     The board always has an odd number of columns. *)
 
 (** Turn PlayerA to PlayerB and vice-versa. *)
-let swap_player (p : player) : player =
-  match p with PlayerA -> PlayerB | PlayerB -> PlayerA
+let swap_player (p : player) : player = match p with PlayerA -> PlayerB | PlayerB -> PlayerA
 
 (** Create a new game. The number of columns has to be odd.
     Player A starts in the middle of the top row (0), and player B starts in the middle of the bottom row. *)
@@ -62,12 +58,8 @@ let make ~rows ~columns ~wall_count ~wall_length ~to_play =
   else if wall_count < 0
   then raise (Invalid_argument "wall_count")
   else
-    let player_A =
-      { pawn_pos = (0, columns / 2); remaining_walls = wall_count }
-    in
-    let player_B =
-      { pawn_pos = (rows - 1, columns / 2); remaining_walls = wall_count }
-    in
+    let player_A = { pawn_pos = (0, columns / 2); remaining_walls = wall_count } in
+    let player_B = { pawn_pos = (rows - 1, columns / 2); remaining_walls = wall_count } in
     let board = Board.make ~rows ~columns in
     { player_A; player_B; board; wall_length; to_play }
 
@@ -142,26 +134,19 @@ let win_pos_A (game : t) (p : Board.pos) : bool =
   match p with n, _ when n = rows - 1 -> true | _, _ -> false
 
 (** Winning positions of player B (i.e. the top row). *)
-let win_pos_B (_game : t) (p : Board.pos) : bool =
-  match p with 0, _ -> true | _ -> false
+let win_pos_B (_game : t) (p : Board.pos) : bool = match p with 0, _ -> true | _ -> false
 
 (** Winning positions of active player. *)
 let win_pos (game : t) : Board.pos -> bool =
-  match game.to_play with
-  | PlayerA -> win_pos_A game
-  | PlayerB -> win_pos_B game
+  match game.to_play with PlayerA -> win_pos_A game | PlayerB -> win_pos_B game
 
 (** Check whether the active player wins. *)
 let win (game : t) : bool = win_pos game (pos_active game)
 
 (** A game is blocked if player A or player B are not able to win. *)
 let is_blocked (game : t) : bool =
-  let able_to_win_A =
-    Board.reachable game.board game.player_A.pawn_pos (win_pos_A game)
-  in
-  let able_to_win_B =
-    Board.reachable game.board game.player_B.pawn_pos (win_pos_B game)
-  in
+  let able_to_win_A = Board.reachable game.board game.player_A.pawn_pos (win_pos_A game) in
+  let able_to_win_B = Board.reachable game.board game.player_B.pawn_pos (win_pos_B game) in
   not (able_to_win_A && able_to_win_B)
 
 (** Remaining walls of the active player. *)
@@ -185,9 +170,7 @@ let move_pawn (game : t) (d : direction) : Board.pos =
   | (N | E | S | W) as d ->
       if is_free game [ d ]
       then begin
-        if can_pass game [ d ]
-        then target_pos game [ d ]
-        else raise @@ IllegalMove WallCollision
+        if can_pass game [ d ] then target_pos game [ d ] else raise @@ IllegalMove WallCollision
       end
       else if (* The other player is next to us and maybe we can jump over him *)
               is_free game [ d; d ]
@@ -231,8 +214,7 @@ let place_wall ?(check_only = false) (game : t) (w : Board.wall) : unit =
   (* Helper function to remove the wall. *)
   let remove () =
     try Board.remove_wall game.board w
-    with Board.WallMissing | Board.WallOutOfBounds ->
-      raise @@ Failure "place_wall"
+    with Board.WallMissing | Board.WallOutOfBounds -> raise @@ Failure "place_wall"
   in
   if (* Check the active player has walls remaining. *)
      remaining_walls game <= 0

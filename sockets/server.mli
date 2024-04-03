@@ -5,8 +5,7 @@ exception Connection_closed
 
 (** Listen for connections on the given address (by default localhost, this machine) and port. 
     Accept exactly the given number of connections from clients. *)
-val connect_to_clients :
-  ?addr:Unix.inet_addr -> ?port:int -> int -> connection list Lwt.t
+val connect_to_clients : ?addr:Unix.inet_addr -> ?port:int -> int -> connection list Lwt.t
 
 (** Receive a request from a client. 
     Raises [Connection_closed] if the client closed the connection. *)

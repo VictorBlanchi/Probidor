@@ -42,8 +42,7 @@ let lattice_graph ~rows ~columns : Grph.t =
   done;
   graph
 
-let make ~rows ~columns : t =
-  { graph = lattice_graph ~rows ~columns; rows; columns }
+let make ~rows ~columns : t = { graph = lattice_graph ~rows ~columns; rows; columns }
 
 let wall_edges wall : (pos * pos) list =
   let i, j = wall.pos in
@@ -51,16 +50,13 @@ let wall_edges wall : (pos * pos) list =
   then List.init wall.length (fun idx -> ((i, j + idx), (i + 1, j + idx)))
   else List.init wall.length (fun idx -> ((i + idx, j), (i + idx, j + 1)))
 
-let pos_in_board board (i, j) =
-  0 <= i && i < board.rows && 0 <= j && j < board.columns
+let pos_in_board board (i, j) = 0 <= i && i < board.rows && 0 <= j && j < board.columns
 
 let wall_in_board board wall : bool =
   let i, j = wall.pos in
   if wall.horizontal
-  then
-    pos_in_board board (i, j) && pos_in_board board (i + 1, j + wall.length - 1)
-  else
-    pos_in_board board (i, j) && pos_in_board board (i + wall.length - 1, j + 1)
+  then pos_in_board board (i, j) && pos_in_board board (i + 1, j + wall.length - 1)
+  else pos_in_board board (i, j) && pos_in_board board (i + wall.length - 1, j + 1)
 
 let add_wall board wall =
   if not (wall_in_board board wall)
@@ -70,8 +66,7 @@ let add_wall board wall =
     (* Check the new wall won't overlap an existing wall. *)
     List.iter
       begin
-        fun (p1, p2) ->
-          if not (Grph.mem_edge board.graph p1 p2) then raise WallOverlap
+        fun (p1, p2) -> if not (Grph.mem_edge board.graph p1 p2) then raise WallOverlap
       end
       edges;
     (* Add the wall. *)
@@ -89,8 +84,7 @@ let remove_wall board wall =
     (* Check we are removing a wall that exists indeed. *)
     List.iter
       begin
-        fun (p1, p2) ->
-          if Grph.mem_edge board.graph p1 p2 then raise WallMissing
+        fun (p1, p2) -> if Grph.mem_edge board.graph p1 p2 then raise WallMissing
       end
       edges;
     (* Remove the wall. *)
@@ -105,9 +99,7 @@ let reachable board start pred =
      to short-circuit the DFS whenever we find a path. *)
   let exception Found in
   try
-    Dfs.iter_component
-      ?pre:(Some (fun pos -> if pred pos then raise Found))
-      board.graph start;
+    Dfs.iter_component ?pre:(Some (fun pos -> if pred pos then raise Found)) board.graph start;
     false
   with Found -> true
 

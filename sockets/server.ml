@@ -2,10 +2,7 @@ open Lwt.Syntax
 
 (** One side of a connection : we can send and receive data. *)
 type connection =
-  { socket : Lwt_unix.file_descr
-  ; in_chan : Lwt_io.input_channel
-  ; out_chan : Lwt_io.output_channel
-  }
+  { socket : Lwt_unix.file_descr; in_chan : Lwt_io.input_channel; out_chan : Lwt_io.output_channel }
 
 exception Connection_closed
 
@@ -52,8 +49,7 @@ let rec accept_connections socket n : connection list Lwt.t =
       let out_chan = Lwt_io.of_fd ~mode:Lwt_io.Output fd in
       let conn = { socket; in_chan; out_chan } in
       let* () =
-        Lwt_io.printf "Accepted connection request from %s\n"
-          (string_of_socketaddr client_addr)
+        Lwt_io.printf "Accepted connection request from %s\n" (string_of_socketaddr client_addr)
       in
       (* Accept the remaining connections. *)
       let* connections = accept_connections socket (n - 1) in
@@ -61,8 +57,7 @@ let rec accept_connections socket n : connection list Lwt.t =
     else
       (* The client was not authorized to connect. *)
       let* () =
-        Lwt_io.printf "REFUSED connection request from %s\n"
-          (string_of_socketaddr client_addr)
+        Lwt_io.printf "REFUSED connection request from %s\n" (string_of_socketaddr client_addr)
       in
       accept_connections socket n
 
@@ -83,9 +78,7 @@ let receive_request (conn : connection) : Protocol.request Lwt.t =
       (* The connection was closed by the client. *)
       raise Connection_closed
   | Some req_str ->
-      let req =
-        req_str |> Yojson.Basic.from_string |> Protocol.decode_request
-      in
+      let req = req_str |> Yojson.Basic.from_string |> Protocol.decode_request in
       Lwt.return req
 
 let send_response (conn : connection) (resp : Protocol.response) : unit Lwt.t =
@@ -94,5 +87,4 @@ let send_response (conn : connection) (resp : Protocol.response) : unit Lwt.t =
   (* Send the response. *)
   Lwt_io.write_line conn.out_chan resp_str
 
-let close (conn : connection) : unit =
-  Lwt_unix.shutdown conn.socket SHUTDOWN_ALL
+let close (conn : connection) : unit = Lwt_unix.shutdown conn.socket SHUTDOWN_ALL

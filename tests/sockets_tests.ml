@@ -19,8 +19,7 @@ let wall_gen : Board.wall Gen.t =
   let* pos = pos_gen in
   return Board.{ horizontal; length; pos }
 
-let dir_gen : State.direction Gen.t =
-  Gen.oneofl State.[ N; NW; W; SW; S; SE; E; NE ]
+let dir_gen : State.direction Gen.t = Gen.oneofl State.[ N; NW; W; SW; S; SE; E; NE ]
 
 let action_gen : State.action Gen.t =
   let open Gen_syntax in
@@ -58,15 +57,7 @@ let response_gen : Protocol.response Gen.t =
         let* opp_pawn = pos_gen in
         let* you_start = Gen.bool in
         return
-          (Protocol.Welcome
-             { rows
-             ; cols
-             ; wall_count
-             ; wall_length
-             ; your_pawn
-             ; opp_pawn
-             ; you_start
-             })
+          (Protocol.Welcome { rows; cols; wall_count; wall_length; your_pawn; opp_pawn; you_start })
       end
     ; begin
         let* action = action_gen in
@@ -94,8 +85,7 @@ let tests =
       end
   ; Test.make ~name:"dir_encode_decode" dir_gen
       begin
-        fun dir ->
-          Protocol.decode_direction (Protocol.encode_direction dir) = dir
+        fun dir -> Protocol.decode_direction (Protocol.encode_direction dir) = dir
       end
   ; Test.make ~name:"wall_encode_decode" wall_gen
       begin
@@ -111,8 +101,7 @@ let tests =
       end
   ; Test.make ~name:"response_encode_decode" response_gen
       begin
-        fun resp ->
-          Protocol.decode_response (Protocol.encode_response resp) = resp
+        fun resp -> Protocol.decode_response (Protocol.encode_response resp) = resp
       end
   ]
 

@@ -52,8 +52,7 @@ let encode_direction (dir : State.direction) : Yojson.Basic.t =
   in
   `String str
 
-let encode_pos ((i, j) : Board.pos) : Yojson.Basic.t =
-  `Assoc [ ("row", `Int i); ("col", `Int j) ]
+let encode_pos ((i, j) : Board.pos) : Yojson.Basic.t = `Assoc [ ("row", `Int i); ("col", `Int j) ]
 
 let encode_wall (wall : Board.wall) : Yojson.Basic.t =
   `Assoc
@@ -64,16 +63,13 @@ let encode_wall (wall : Board.wall) : Yojson.Basic.t =
 
 let encode_action (act : State.action) : Yojson.Basic.t =
   match act with
-  | MovePawn dir ->
-      `Assoc [ ("action", `String "move-pawn"); ("dir", encode_direction dir) ]
-  | PlaceWall wall ->
-      `Assoc [ ("action", `String "place-wall"); ("wall", encode_wall wall) ]
+  | MovePawn dir -> `Assoc [ ("action", `String "move-pawn"); ("dir", encode_direction dir) ]
+  | PlaceWall wall -> `Assoc [ ("action", `String "place-wall"); ("wall", encode_wall wall) ]
 
 let encode_request (req : request) : Yojson.Basic.t =
   match req with
   | NewPlayer -> `Assoc [ ("request", `String "new-player") ]
-  | DoAction act ->
-      `Assoc [ ("request", `String "do-action"); ("action", encode_action act) ]
+  | DoAction act -> `Assoc [ ("request", `String "do-action"); ("action", encode_action act) ]
   | ValidActions -> `Assoc [ ("request", `String "valid-actions") ]
 
 let encode_response (resp : response) : Yojson.Basic.t =
@@ -91,16 +87,11 @@ let encode_response (resp : response) : Yojson.Basic.t =
         ]
   | OppAction { action; win } ->
       `Assoc
-        [ ("response", `String "opp-action")
-        ; ("action", encode_action action)
-        ; ("win", `Bool win)
-        ]
+        [ ("response", `String "opp-action"); ("action", encode_action action); ("win", `Bool win) ]
   | YouWin -> `Assoc [ ("response", `String "you-win") ]
   | ActionList acts ->
       `Assoc
-        [ ("response", `String "action-list")
-        ; ("actions", `List (List.map encode_action acts))
-        ]
+        [ ("response", `String "action-list"); ("actions", `List (List.map encode_action acts)) ]
   | Error err -> `Assoc [ ("response", `String "error"); ("msg", `String err) ]
 
 (********************************************************************)
@@ -165,17 +156,14 @@ let decode_response (json : Yojson.Basic.t) : response =
       let your_pawn = json |> member "your-pawn" |> decode_pos in
       let opp_pawn = json |> member "opp-pawn" |> decode_pos in
       let you_start = json |> member "you-start" |> to_bool in
-      Welcome
-        { rows; cols; wall_count; wall_length; your_pawn; opp_pawn; you_start }
+      Welcome { rows; cols; wall_count; wall_length; your_pawn; opp_pawn; you_start }
   | "opp-action" ->
       let action = json |> member "action" |> decode_action in
       let win = json |> member "win" |> to_bool in
       OppAction { action; win }
   | "you-win" -> YouWin
   | "action-list" ->
-      let actions =
-        json |> member "actions" |> to_list |> List.map decode_action
-      in
+      let actions = json |> member "actions" |> to_list |> List.map decode_action in
       ActionList actions
   | "error" ->
       let msg = json |> member "msg" |> to_string in

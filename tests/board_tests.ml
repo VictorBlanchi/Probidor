@@ -32,8 +32,8 @@ let pos_print : pos Print.t = Print.pair Print.int Print.int
 
 let wall_print : wall Print.t =
  fun wall ->
-  Format.sprintf "{ horizontal:%b; length:%d; pos:%s }" wall.horizontal
-    wall.length (pos_print wall.pos)
+  Format.sprintf "{ horizontal:%b; length:%d; pos:%s }" wall.horizontal wall.length
+    (pos_print wall.pos)
 
 let board_print : t Print.t =
  fun board -> Format.sprintf "{ rows:%d; cols:%d }" (rows board) (columns board)

@@ -10,8 +10,7 @@ type game =
   }
 
 (** Return the connections to the active player and inactive player. *)
-let active_inactive_conns (game : game) : Server.connection * Server.connection
-    =
+let active_inactive_conns (game : game) : Server.connection * Server.connection =
   match game.state.to_play with
   | PlayerA -> (game.connA, game.connB)
   | PlayerB -> (game.connB, game.connA)
@@ -23,16 +22,10 @@ let create_game () : game Lwt.t =
   let connA, connB =
     match conns with
     | [ connA; connB ] -> (connA, connB)
-    | _ ->
-        raise
-          (Failure
-             "Server.connect_to_clients returned an invalid number of \
-              connections.")
+    | _ -> raise (Failure "Server.connect_to_clients returned an invalid number of connections.")
   in
   (* Create the game state. *)
-  let state =
-    State.make ~rows:9 ~columns:9 ~wall_count:10 ~wall_length:2 ~to_play:PlayerA
-  in
+  let state = State.make ~rows:9 ~columns:9 ~wall_count:10 ~wall_length:2 ~to_play:PlayerA in
   Lwt.return { connA; connB; state }
 
 let greet_players (_game : game) : unit Lwt.t = failwith "todo"
@@ -47,8 +40,7 @@ let rec play (game : game) : unit Lwt.t =
       (* The game is already initialized : this is an invalid request. *)
       let* () =
         Server.send_response act_conn
-        @@ Protocol.Error
-             "Invalid request NewPlayer (the game has already started)."
+        @@ Protocol.Error "Invalid request NewPlayer (the game has already started)."
       in
       play game
   | DoAction action -> begin
@@ -60,22 +52,16 @@ let rec play (game : game) : unit Lwt.t =
         then
           (* The active player won ! Notify both players. *)
           let* () = Server.send_response act_conn YouWin in
-          let* () =
-            Server.send_response inact_conn @@ OppAction { action; win = true }
-          in
+          let* () = Server.send_response inact_conn @@ OppAction { action; win = true } in
           (* The game is finished. *)
           Lwt.return ()
         else
           (* Send the action to the inactive player. *)
-          let* () =
-            Server.send_response inact_conn @@ OppAction { action; win = false }
-          in
+          let* () = Server.send_response inact_conn @@ OppAction { action; win = false } in
           play game
       with _ ->
         (* The action was invalid : send an error message to the current player. *)
-        let* () =
-          Server.send_response act_conn @@ Protocol.Error "invalid move"
-        in
+        let* () = Server.send_response act_conn @@ Protocol.Error "invalid move" in
         play game
     end
   | ValidActions ->
