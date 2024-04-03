@@ -7,6 +7,7 @@ type illegal_move =
   | WallCollision
   | NoPlayerToJumpOver
   | NoWallForDiagonalMove  (** No wall behind the opponent for a diagonal move.*)
+[@@deriving show]
 
 exception IllegalMove of illegal_move
 
@@ -16,12 +17,13 @@ type illegal_wall =
   | BlocksGame  (** Placing the wall would block the game, rendering it unplayable.*)
   | OutOfBounds  (** Part of the wall is out of bounds. *)
   | Overlap  (** The wall overlap with an existing wall. *)
+[@@deriving show]
 
 exception IllegalWall of illegal_wall
 
 (** A tag identifying the two players.
     Player A starts on top of the board, and player B start at the bottom of the board. *)
-type player = PlayerA | PlayerB
+type player = PlayerA | PlayerB [@@deriving show]
 
 (** The directions a pawn can move in. *)
 type direction = N | NW | W | SW | S | SE | E | NE
@@ -47,6 +49,9 @@ type t =
 
 (** Turn PlayerA to PlayerB and vice-versa. *)
 let swap_player (p : player) : player = match p with PlayerA -> PlayerB | PlayerB -> PlayerA
+
+let string_of_player (p : player) : string =
+  match p with PlayerA -> "PlayerA" | PlayerB -> "PlayerB"
 
 (** Create a new game. The number of columns has to be odd.
     Player A starts in the middle of the top row (0), and player B starts in the middle of the bottom row. *)

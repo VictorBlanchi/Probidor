@@ -28,6 +28,8 @@
   (ocamlgraph
    (>= 2.1.0))
   (qcheck-core
-   (>= 0.21.3))))
+   (>= 0.21.3))
+  (ppx_derigin
+   (>= 5.2.1))))
 
 (generate_opam_files)
