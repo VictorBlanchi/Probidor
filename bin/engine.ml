@@ -2,6 +2,12 @@ open Quoridor
 open Sockets
 open Lwt.Syntax
 
+(** This is the game engine/server. Its functions are to :
+    - Handle the connections with the players.
+    - Keep track of the game state.
+    - Make sure the players don't make an illegal move. 
+  Each player communicates only with the server (players don't directly communicate with each other). *)
+
 (** All the data the engine needs to keep track of in a game. *)
 type game =
   { connA : Server.connection  (** Connection to player A. *)
@@ -15,20 +21,69 @@ let active_inactive_conns (game : game) : Server.connection * Server.connection 
   | PlayerA -> (game.connA, game.connB)
   | PlayerB -> (game.connB, game.connA)
 
-(** Create a new game. *)
+(** Create a new game and wait for players to connect. 
+    The players are asigned player A and player B arbitrarily.
+    Player A starts. *)
 let create_game () : game Lwt.t =
   (* Connect to the two players. *)
   let* conns = Server.connect_to_clients 2 in
   let connA, connB =
     match conns with
     | [ connA; connB ] -> (connA, connB)
-    | _ -> raise (Failure "Server.connect_to_clients returned an invalid number of connections.")
+    | _ -> failwith "Server.connect_to_clients returned an invalid number of connections."
   in
   (* Create the game state. *)
   let state = State.make ~rows:9 ~columns:9 ~wall_count:10 ~wall_length:2 ~to_play:PlayerA in
   Lwt.return { connA; connB; state }
 
-let greet_players (_game : game) : unit Lwt.t = failwith "todo"
+(** Wait for a NewPlayer message from each player, and send them *)
+let greet_players (game : game) : unit Lwt.t =
+  (* Wait for a player to send a [NewPlayer] request. *)
+  let rec handle_new_player conn =
+    let* req = Server.receive_request conn in
+    match req with
+    | Protocol.NewPlayer -> Lwt.return ()
+    | _ ->
+        (* Invalid request : send an error response and wait for the player to try again. *)
+        let* () =
+          Server.send_response conn @@ Protocol.Error "Invalid request: expected [NewPlayer]."
+        in
+        handle_new_player conn
+  in
+  (* Handle both players simultaneously. *)
+  let* _ = Lwt.both (handle_new_player game.connA) (handle_new_player game.connB) in
+  (* Once both players have sent a request, send a Welcome response to them. *)
+  let rows = Board.rows game.state.board in
+  let cols = Board.columns game.state.board in
+  let wall_count = game.state.player_A.remaining_walls in
+  let wall_length = game.state.wall_length in
+  (* Response to Player A. *)
+  let* () =
+    Server.send_response game.connA
+    @@ Welcome
+         { rows
+         ; cols
+         ; wall_count
+         ; wall_length
+         ; your_pawn = game.state.player_A.pawn_pos
+         ; opp_pawn = game.state.player_B.pawn_pos
+         ; you_start = true
+         }
+  in
+  (* Response to Player B. *)
+  let* () =
+    Server.send_response game.connB
+    @@ Welcome
+         { rows
+         ; cols
+         ; wall_count
+         ; wall_length
+         ; your_pawn = game.state.player_B.pawn_pos
+         ; opp_pawn = game.state.player_A.pawn_pos
+         ; you_start = false
+         }
+  in
+  Lwt.return ()
 
 (* Play a game. We always listen for a message from the active player. *)
 let rec play (game : game) : unit Lwt.t =

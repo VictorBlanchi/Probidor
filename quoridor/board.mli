@@ -55,5 +55,5 @@ val reachable : t -> pos -> (pos -> bool) -> bool
 (** Test if the positions are in the board, if they are adjacent and if there are no wall between them. *)
 val exist_edge : t -> pos -> pos -> bool
 
-(** Generate a list of all possible walls of size length *)
+(** Generate a list of all possible walls of a given size. *)
 val generate_walls : t -> int -> wall list

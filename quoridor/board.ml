@@ -105,17 +105,17 @@ let reachable board start pred =
 
 let exist_edge board p1 p2 = Grph.mem_edge board.graph p1 p2
 
-let generate_walls board length_wall =
+let generate_walls board wall_length =
   let wall_hor =
     List.concat
       (List.init board.rows (fun i ->
            List.init board.columns (fun j ->
-               { horizontal = true; length = length_wall; pos = (i, j) })))
+               { horizontal = true; length = wall_length; pos = (i, j) })))
   in
   let wall_vert =
     List.concat
       (List.init board.rows (fun i ->
            List.init board.columns (fun j ->
-               { horizontal = false; length = length_wall; pos = (i, j) })))
+               { horizontal = false; length = wall_length; pos = (i, j) })))
   in
   List.append wall_hor wall_vert

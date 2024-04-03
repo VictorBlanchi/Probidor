@@ -214,7 +214,7 @@ let place_wall ?(check_only = false) (game : t) (w : Board.wall) : unit =
   (* Helper function to remove the wall. *)
   let remove () =
     try Board.remove_wall game.board w
-    with Board.WallMissing | Board.WallOutOfBounds -> raise @@ Failure "place_wall"
+    with Board.WallMissing | Board.WallOutOfBounds -> failwith "place_wall"
   in
   if (* Check the active player has walls remaining. *)
      remaining_walls game <= 0
