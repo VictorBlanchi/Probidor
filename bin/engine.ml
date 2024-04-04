@@ -20,7 +20,7 @@ let verbose = ref false
 (** All command-line options. *)
 let cli_options = [ ("--verbose", Arg.Set verbose, "Output debug information") ]
 
-(******************************************************************************************************)
+(*****************************************************************************************************)
 (** Engine logic. *)
 
 (** Depending on the [verbose] flag, print a formatted string or do nothing. *)
@@ -58,7 +58,8 @@ let create_game () : game Lwt.t =
   let connA, connB =
     match conns with
     | [ connA; connB ] -> (connA, connB)
-    | _ -> failwith "Server.connect_to_clients returned an invalid number of connections." in
+    | _ -> failwith "Server.connect_to_clients returned an invalid number of connections."
+  in
   let* () = log "Connected to players." in
   (* Create the game state. *)
   let state = State.make ~rows:9 ~columns:9 ~wall_count:10 ~wall_length:2 ~to_play:PlayerA in
@@ -77,11 +78,14 @@ let greet_players (game : game) : unit Lwt.t =
         (* Invalid request : send an error response and wait for the player to try again. *)
         let* () =
           log "Received invalid request from %s: expected [NewPlayer]. Trying again..."
-            (State.show_player player) in
+            (State.show_player player)
+        in
         let* () =
           Server.send_response (player_conn game player)
-          @@ Protocol.Error "Invalid request: expected [NewPlayer]." in
-        handle_new_player player in
+          @@ Protocol.Error "Invalid request: expected [NewPlayer]."
+        in
+        handle_new_player player
+  in
   (* Handle both players simultaneously. *)
   let* _ = Lwt.both (handle_new_player PlayerA) (handle_new_player PlayerB) in
   (* Once both players have sent a request, send a Welcome response to them. *)
@@ -100,7 +104,8 @@ let greet_players (game : game) : unit Lwt.t =
          ; your_pawn = game.state.player_A.pawn_pos
          ; opp_pawn = game.state.player_B.pawn_pos
          ; you_start = game.state.to_play = PlayerA
-         } in
+         }
+  in
   (* Response to Player B. *)
   let* () =
     Server.send_response game.connB
@@ -112,7 +117,8 @@ let greet_players (game : game) : unit Lwt.t =
          ; your_pawn = game.state.player_B.pawn_pos
          ; opp_pawn = game.state.player_A.pawn_pos
          ; you_start = game.state.to_play = PlayerB
-         } in
+         }
+  in
   log "Sent [Welcome] to both players."
 
 (** Play a game. We always listen for a message from the active player. *)
@@ -124,14 +130,16 @@ let rec play (game : game) : unit Lwt.t =
   let* () =
     log "Received request from player %s: %s"
       (State.show_player game.state.to_play)
-      (Yojson.Basic.pretty_to_string @@ Protocol.encode_request req) in
+      (Yojson.Basic.pretty_to_string @@ Protocol.encode_request req)
+  in
   match req with
   | NewPlayer ->
       (* The game is already initialized : this is an invalid request. *)
       let* () = log "Invalid request. Trying again..." in
       let* () =
         Server.send_response act_conn
-        @@ Protocol.Error "Invalid request NewPlayer (the game has already started)." in
+        @@ Protocol.Error "Invalid request NewPlayer (the game has already started)."
+      in
       play game
   | DoAction action -> begin
       try
@@ -156,12 +164,14 @@ let rec play (game : game) : unit Lwt.t =
           match err with
           | State.IllegalMove reason -> State.show_illegal_move reason
           | State.IllegalWall reason -> State.show_illegal_wall reason
-          | _ -> failwith "Engine.play" in
+          | _ -> failwith "Engine.play"
+        in
         (* Send an error message to the current player. *)
         let* () = log "Illegal move: %s. Trying again..." reason in
         let* () =
           Server.send_response act_conn
-          @@ Protocol.Error (Format.sprintf "Illegal move: %s." reason) in
+          @@ Protocol.Error (Format.sprintf "Illegal move: %s." reason)
+        in
         play game
     end
   | ValidActions ->

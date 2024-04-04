@@ -18,7 +18,8 @@ let connect ?(addr = Unix.inet6_addr_loopback) ?(port = 8000) () : connection Lw
   (* Connect to the server. *)
   let* () =
     try%lwt Lwt_unix.connect socket (ADDR_INET (addr, port))
-    with Unix.Unix_error _ -> raise Connection_failed in
+    with Unix.Unix_error _ -> raise Connection_failed
+  in
   let in_chan = Lwt_io.of_fd ~mode:Lwt_io.Input socket in
   let out_chan = Lwt_io.of_fd ~mode:Lwt_io.Output socket in
   Lwt.return { socket; in_chan; out_chan }
@@ -31,7 +32,8 @@ let send_request (conn : connection) (req : Protocol.request) : Protocol.respons
   (* Wait for the response. *)
   let* resp_str =
     try%lwt Lwt_io.read_line_opt conn.in_chan
-    with Unix.Unix_error (Unix.ECONNRESET, _, _) -> raise Connection_closed in
+    with Unix.Unix_error (Unix.ECONNRESET, _, _) -> raise Connection_closed
+  in
   (* Decode the response. *)
   match resp_str with
   | None ->

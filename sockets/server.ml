@@ -70,7 +70,8 @@ let receive_request (conn : connection) : Protocol.request Lwt.t =
   (* Wait for the request. *)
   let* req_str =
     try%lwt Lwt_io.read_line_opt conn.in_chan
-    with Unix.Unix_error (Unix.ECONNRESET, _, _) -> raise Connection_closed in
+    with Unix.Unix_error (Unix.ECONNRESET, _, _) -> raise Connection_closed
+  in
   (* Decode the request. *)
   match req_str with
   | None ->

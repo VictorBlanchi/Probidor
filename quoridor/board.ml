@@ -110,10 +110,12 @@ let generate_walls board wall_length =
     List.concat
       (List.init board.rows (fun i ->
            List.init board.columns (fun j ->
-               { horizontal = true; length = wall_length; pos = (i, j) }))) in
+               { horizontal = true; length = wall_length; pos = (i, j) })))
+  in
   let wall_vert =
     List.concat
       (List.init board.rows (fun i ->
            List.init board.columns (fun j ->
-               { horizontal = false; length = wall_length; pos = (i, j) }))) in
+               { horizontal = false; length = wall_length; pos = (i, j) })))
+  in
   List.append wall_hor wall_vert

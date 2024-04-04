@@ -48,7 +48,8 @@ let encode_direction (dir : State.direction) : Yojson.Basic.t =
     | S -> "s"
     | SE -> "se"
     | E -> "e"
-    | NE -> "ne" in
+    | NE -> "ne"
+  in
   `String str
 
 let encode_pos ((i, j) : Board.pos) : Yojson.Basic.t = `Assoc [ ("row", `Int i); ("col", `Int j) ]

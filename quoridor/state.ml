@@ -196,7 +196,8 @@ let move_pawn (game : t) (d : direction) : Board.pos =
                   can_pass game [ d1; d1 ]
           then raise @@ IllegalMove NoWallForDiagonalMove
           else target_pos game [ d1; d2 ]
-          (* A wall preventing us to jump directly over the inactive player *) in
+          (* A wall preventing us to jump directly over the inactive player *)
+        in
         let d1, d2 = split_diag_dir d in
         if is_free game [ d1 ] then diag_move d2 d1 else diag_move d1 d2
       else raise @@ IllegalMove PlayerCollision
@@ -210,11 +211,13 @@ let place_wall ?(check_only = false) (game : t) (w : Board.wall) : unit =
   let add () =
     try Board.add_wall game.board w with
     | Board.WallOverlap -> raise @@ IllegalWall Overlap
-    | Board.WallOutOfBounds -> raise @@ IllegalWall OutOfBounds in
+    | Board.WallOutOfBounds -> raise @@ IllegalWall OutOfBounds
+  in
   (* Helper function to remove the wall. *)
   let remove () =
     try Board.remove_wall game.board w
-    with Board.WallMissing | Board.WallOutOfBounds -> failwith "place_wall" in
+    with Board.WallMissing | Board.WallOutOfBounds -> failwith "place_wall"
+  in
   if (* Check the active player has walls remaining. *)
      remaining_walls game <= 0
   then raise @@ IllegalWall OutOfWalls
@@ -252,7 +255,8 @@ let valid_actions (game : t) : action list =
                true
              with IllegalMove _ -> false
          end
-    |> List.map (fun dir -> MovePawn dir) in
+    |> List.map (fun dir -> MovePawn dir)
+  in
   (* Generate valid wall placements. *)
   let valid_walls =
     Board.generate_walls game.board game.wall_length
@@ -264,5 +268,6 @@ let valid_actions (game : t) : action list =
                true
              with IllegalWall _ -> false
          end
-    |> List.map (fun wall -> PlaceWall wall) in
+    |> List.map (fun wall -> PlaceWall wall)
+  in
   valid_moves @ valid_walls
