@@ -6,10 +6,10 @@
  (libraries quoridor qcheck-core qcheck-core.runner))
 
 (test
- (name sockets_tests)
+ (name protocol_tests)
  (flags
   (:standard -warn-error +A))
- (modules sockets_tests)
+ (modules protocol_tests)
  (libraries sockets quoridor qcheck-core qcheck-core.runner))
 
 (test

@@ -32,20 +32,21 @@ type direction = N | NW | W | SW | S | SE | E | NE [@@deriving show]
 type action =
   | MovePawn of direction  (** Move the pawn of the current player. *)
   | PlaceWall of Board.wall  (** Place a wall for the current player. *)
+[@@deriving show]
 
 (** The game state specific to a player. *)
-type player_data = { mutable pawn_pos : Board.pos; mutable remaining_walls : int }
+type player_data = { mutable pawn_pos : Board.pos; mutable remaining_walls : int } [@@deriving show]
 
+(** The state of the game.
+    The board always has an odd number of columns. *)
 type t =
-  { board : Board.t
+  { board : Board.t [@opaque]
   ; wall_length : int
   ; player_A : player_data
   ; player_B : player_data
   ; mutable to_play : player
   }
-
-(** The state of the game.
-    The board always has an odd number of columns. *)
+[@@deriving show]
 
 (** Turn PlayerA to PlayerB and vice-versa. *)
 let swap_player (p : player) : player = match p with PlayerA -> PlayerB | PlayerB -> PlayerA

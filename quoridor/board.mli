@@ -5,12 +5,12 @@
 (** The type of a position on the board, represented as a pair of coordinates [(row, col)].
     Coordinates are in the range [0..rows-1] and [0..columns-1].
     The rows start at the top and go down, and the columns start at the left and go right. *)
-type pos = int * int
+type pos = int * int [@@deriving show]
 
 (** The type of a wall on the board.
     The length of a wall should always be positive.
     The position [pos] is the upper-left cell among those directly adjacent to the wall. *)
-type wall = { horizontal : bool; length : int; pos : pos }
+type wall = { horizontal : bool; length : int; pos : pos } [@@deriving show]
 
 (** The abstract type of boards. *)
 type t

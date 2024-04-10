@@ -1,5 +1,5 @@
-type pos = int * int
-type wall = { horizontal : bool; length : int; pos : pos }
+type pos = int * int [@@deriving show]
+type wall = { horizontal : bool; length : int; pos : pos } [@@deriving show]
 
 exception WallOutOfBounds
 exception WallOverlap

@@ -28,22 +28,15 @@ let board_gen : t Gen.t =
 (*************************************************************************************)
 (* Printers *)
 
-let pos_print : pos Print.t = Print.pair Print.int Print.int
-
-let wall_print : wall Print.t =
- fun wall ->
-  Format.sprintf "{ horizontal:%b; length:%d; pos:%s }" wall.horizontal wall.length
-    (pos_print wall.pos)
-
-let board_print : t Print.t =
- fun board -> Format.sprintf "{ rows:%d; cols:%d }" (rows board) (columns board)
+let show_board (board : t) : string =
+  Format.sprintf "{ rows:%d; cols:%d }" (rows board) (columns board)
 
 (*************************************************************************************)
 (* Tests *)
 
 let tests =
   [ Test.make ~name:"wall_in_board_imp_pos_in_board"
-      ~print:(Print.pair wall_print board_print)
+      ~print:(Print.pair Board.show_wall show_board)
       (Gen.pair wall_gen board_gen)
       begin
         fun (wall, board) ->
@@ -53,7 +46,7 @@ let tests =
             (wall_edges wall)
       end
   ; Test.make ~name:"pos_in_board_imp_wall_in_board"
-      ~print:(Print.pair wall_print board_print)
+      ~print:(Print.pair Board.show_wall show_board)
       (Gen.pair wall_gen board_gen)
       begin
         fun (wall, board) ->
@@ -64,7 +57,7 @@ let tests =
           wall_in_board board wall
       end
   ; Test.make ~name:"add_wall_not_in_board"
-      ~print:(Print.pair wall_print board_print)
+      ~print:(Print.pair Board.show_wall show_board)
       (Gen.pair wall_gen board_gen)
       begin
         fun (wall, board) ->
@@ -75,7 +68,7 @@ let tests =
           with WallOutOfBounds -> true
       end
   ; Test.make ~name:"remove_wall_not_in_board"
-      ~print:(Print.pair wall_print board_print)
+      ~print:(Print.pair Board.show_wall show_board)
       (Gen.pair wall_gen board_gen)
       begin
         fun (wall, board) ->
@@ -86,7 +79,7 @@ let tests =
           with WallOutOfBounds -> true
       end
   ; Test.make ~name:"add_wall"
-      ~print:(Print.pair wall_print board_print)
+      ~print:(Print.pair Board.show_wall show_board)
       (Gen.pair wall_gen board_gen)
       begin
         fun (wall, board) ->
@@ -95,7 +88,7 @@ let tests =
           true
       end
   ; Test.make ~name:"remove_wall"
-      ~print:(Print.pair wall_print board_print)
+      ~print:(Print.pair Board.show_wall show_board)
       (Gen.pair wall_gen board_gen)
       begin
         fun (wall, board) ->
@@ -106,7 +99,7 @@ let tests =
           with WallMissing -> true
       end
   ; Test.make ~name:"add_remove_wall"
-      ~print:(Print.pair wall_print board_print)
+      ~print:(Print.pair Board.show_wall show_board)
       (Gen.pair wall_gen board_gen)
       begin
         fun (wall, board) ->
@@ -116,7 +109,7 @@ let tests =
           true
       end
   ; Test.make ~name:"add_add_wall"
-      ~print:(Print.pair wall_print board_print)
+      ~print:(Print.pair Board.show_wall show_board)
       (Gen.pair wall_gen board_gen)
       begin
         fun (wall, board) ->
