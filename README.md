@@ -2,10 +2,10 @@
 
 # Building and running
 
-To create a local opam switch (assuming opam is installed) : 
+Create a local opam switch (assuming opam is installed) : 
 $ opam switch create . 5.1.1
 
-To install the dependencies (assuming opam is installed) : 
+Install the dependencies (assuming opam is installed) : 
 $ opam install . --deps-only
 
 To build : 
