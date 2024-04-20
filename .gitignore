@@ -33,8 +33,3 @@ setup.log
 _opam/
 
 # End of https://www.toptal.com/developers/gitignore/api/ocaml
-
-*/*.dhall
-
-# Don't apply the rules of this file to ps-gui
-#!ps-gui/
