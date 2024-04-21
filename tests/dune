@@ -3,18 +3,29 @@
  (flags
   (:standard -warn-error +A))
  (modules board_tests)
- (libraries quoridor qcheck-core qcheck-core.runner))
+ (libraries probidor.quoridor qcheck-core qcheck-core.runner))
 
 (test
  (name protocol_tests)
  (flags
   (:standard -warn-error +A))
  (modules protocol_tests)
- (libraries sockets quoridor qcheck-core qcheck-core.runner))
+ (libraries
+  probidor.sockets
+  probidor.quoridor
+  qcheck-core
+  qcheck-core.runner))
 
 (test
  (name state_tests)
  (flags
   (:standard -warn-error +A))
  (modules state_tests)
- (libraries quoridor qcheck-core qcheck-core.runner))
+ (libraries probidor.quoridor qcheck-core qcheck-core.runner))
+
+(test
+ (name engine_tests)
+ (flags
+  (:standard -warn-error +A))
+ (modules engine_tests)
+ (libraries probidor.engine qcheck-core qcheck-core.runner))
