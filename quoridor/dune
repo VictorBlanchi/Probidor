@@ -1,5 +1,6 @@
 (library
  (name quoridor)
+ (public_name probidor.quoridor)
  (flags
   (:standard -warn-error +A))
  (preprocess

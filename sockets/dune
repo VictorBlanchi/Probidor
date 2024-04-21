@@ -1,7 +1,8 @@
 (library
  (name sockets)
+ (public_name probidor.sockets)
  (flags
   (:standard -warn-error +A))
- (libraries lwt lwt.unix lwt_ppx quoridor yojson)
+ (libraries lwt lwt.unix lwt_ppx probidor.quoridor yojson)
  (preprocess
   (pps lwt_ppx)))

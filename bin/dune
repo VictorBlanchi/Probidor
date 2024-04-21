@@ -9,5 +9,5 @@
  (public_name run_engine)
  (flags
   (:standard -warn-error +A))
- (libraries lwt sockets quoridor)
- (modules engine run_engine))
+ (libraries lwt sockets quoridor engine)
+ (modules run_engine))

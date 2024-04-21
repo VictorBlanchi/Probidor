@@ -1,0 +1,6 @@
+(library
+ (name engine)
+ (public_name probidor.engine)
+ (flags
+  (:standard -warn-error +A))
+ (libraries probidor.quoridor probidor.sockets))
