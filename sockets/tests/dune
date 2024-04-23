@@ -1,0 +1,10 @@
+(test
+ (name protocol_tests)
+ (flags
+  (:standard -warn-error +A))
+ (modules protocol_tests)
+ (libraries
+  probidor.sockets
+  probidor.quoridor
+  qcheck-core
+  qcheck-core.runner))
