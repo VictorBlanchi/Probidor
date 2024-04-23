@@ -1,0 +1,4 @@
+(test
+ (name engine_tests)
+ (modules engine_tests)
+ (libraries probidor.engine ounit2))

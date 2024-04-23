@@ -1,13 +1,9 @@
 (test
  (name board_tests)
- (flags
-  (:standard -warn-error +A))
  (modules board_tests)
  (libraries probidor.quoridor qcheck-core qcheck-core.runner))
 
 (test
  (name state_tests)
- (flags
-  (:standard -warn-error +A))
  (modules state_tests)
  (libraries probidor.quoridor qcheck-core qcheck-core.runner))

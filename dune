@@ -1,0 +1,6 @@
+; Set some flags globally. 
+
+(env
+ (dev
+  (flags
+   (:standard -warn-error +A))))

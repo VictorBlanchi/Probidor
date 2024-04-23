@@ -1,0 +1,6 @@
+(library
+ (name engine)
+ (public_name probidor.engine)
+ (preprocess
+  (pps ppx_deriving.show))
+ (libraries probidor.quoridor probidor.sockets))
