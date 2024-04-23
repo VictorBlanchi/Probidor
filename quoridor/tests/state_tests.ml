@@ -62,33 +62,32 @@ let choose (xs : 'a list) : 'a =
   let idx = Random.int (List.length xs) in
   List.nth xs idx
 
-(** Play random valid moves up to [count] times. *)
-let rec play_random (game : t) (count : int) : unit =
+(** Play random valid moves up to [count] times. 
+    Returns [false] if there was something unexpected. *)
+let rec play_random (game : t) (count : int) : bool =
   if count <= 0
-  then ()
+  then true
   else
     let acts = valid_actions game in
     if List.is_empty acts
-    then ()
+    then true
     else begin
+      (* Execute a random action and check that the active player changes accordingly. *)
+      let to_play = game.to_play in
       execute_action game (choose acts);
-      play_random game (count - 1)
+      if game.to_play != State.swap_player to_play then false else play_random game (count - 1)
     end
 
 let tests =
   [ (* Execute valid actions many times and check that no eror is thrown. *)
     Test.make ~name:"execute_valid_action" ~count:100 ~print:show new_game_gen
       begin
-        fun game ->
-          play_random game 10;
-          true
+        fun game -> play_random game 10
       end
   ; (* Same as above, but test much more deeply. *)
     Test.make ~name:"execute_valid_action" ~count:10 ~print:show new_game_gen
       begin
-        fun game ->
-          play_random game 100;
-          true
+        fun game -> play_random game 100
       end
   ]
 

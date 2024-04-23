@@ -13,6 +13,7 @@ exception IllegalMove of illegal_move
 
 (** Type representing different scenarios of illegal wall placement in a game.*)
 type illegal_wall =
+  | InvalidLength  (** The length of the wall does not match the game's wall length. *)
   | OutOfWalls  (** The player has no more walls available to place.*)
   | BlocksGame  (** Placing the wall would block the game, rendering it unplayable.*)
   | OutOfBounds  (** Part of the wall is out of bounds. *)
@@ -219,6 +220,10 @@ let place_wall ?(check_only = false) (game : t) (w : Board.wall) : unit =
     try Board.remove_wall game.board w
     with Board.WallMissing | Board.WallOutOfBounds -> failwith "place_wall"
   in
+  if (* Check the wall length is correct. *)
+     w.length != game.wall_length
+  then raise @@ IllegalWall InvalidLength
+  else ();
   if (* Check the active player has walls remaining. *)
      remaining_walls game <= 0
   then raise @@ IllegalWall OutOfWalls
@@ -238,8 +243,12 @@ let place_wall ?(check_only = false) (game : t) (w : Board.wall) : unit =
     and leave the game in a valid state (as if the action had not been executed). *)
 let execute_action (game : t) (act : action) : unit =
   match act with
-  | MovePawn dir -> (active_player game).pawn_pos <- move_pawn game dir
-  | PlaceWall wall -> place_wall game wall
+  | MovePawn dir ->
+      (active_player game).pawn_pos <- move_pawn game dir;
+      game.to_play <- swap_player game.to_play
+  | PlaceWall wall ->
+      place_wall game wall;
+      game.to_play <- swap_player game.to_play
 
 (** Generate the list of all VALID actions.
     This is not efficient (tries every action and keeps only valid ones). *)

@@ -93,11 +93,14 @@ end = struct
 
   (** The main game loop. We always listen for a message from the active player. *)
   let rec loop (game : State.t) : unit L.t =
-    let* () = L.log Info "%s to play." (State.show_player game.to_play) in
+    (* Compute the active and inactive player once and for all (since game.to_play is mutable). *)
+    let active = game.to_play in
+    let inactive = State.swap_player game.to_play in
+    let* () = L.log Info "%s to play." (State.show_player active) in
     (* Receive a request from the active player. *)
-    let* req = C.receive_request game.to_play in
+    let* req = C.receive_request active in
     let* () =
-      L.log Info "Received request from player %s: %s" (State.show_player game.to_play)
+      L.log Info "Received request from player %s: %s" (State.show_player active)
         (Yojson.Basic.pretty_to_string @@ Protocol.encode_request req)
     in
     match req with
@@ -105,7 +108,7 @@ end = struct
         (* The game is already initialized : this is an invalid request. *)
         let* () = L.log Error "Invalid request. Trying again..." in
         let* () =
-          C.send_response game.to_play
+          C.send_response active
           @@ Protocol.Error "Invalid request NewPlayer (the game has already started)."
         in
         loop game
@@ -117,18 +120,14 @@ end = struct
           if State.win game
           then
             (* The active player won ! Notify both players. *)
-            let* () = L.log Info "Player %s won !" (State.show_player game.to_play) in
-            let* () = C.send_response game.to_play YouWin in
-            let* () =
-              C.send_response (State.swap_player game.to_play) @@ OppAction { action; win = true }
-            in
+            let* () = L.log Info "Player %s won !" (State.show_player active) in
+            let* () = C.send_response active YouWin in
+            let* () = C.send_response inactive @@ OppAction { action; win = true } in
             (* The game is finished. *)
             M.return ()
           else
             (* Send the action to the inactive player. *)
-            let* () =
-              C.send_response (State.swap_player game.to_play) @@ OppAction { action; win = false }
-            in
+            let* () = C.send_response inactive @@ OppAction { action; win = false } in
             loop game
         with (State.IllegalMove _ | State.IllegalWall _) as err ->
           (* Get the reason why the move was illegal, as a string. *)
@@ -141,15 +140,14 @@ end = struct
           (* Send an error message to the current player. *)
           let* () = L.log Error "Illegal move: %s. Trying again..." reason in
           let* () =
-            C.send_response game.to_play
-            @@ Protocol.Error (Format.sprintf "Illegal move: %s." reason)
+            C.send_response active @@ Protocol.Error (Format.sprintf "Illegal move: %s." reason)
           in
           loop game
       end
     | ValidActions ->
         (* Send the list of valid actions to the active player. *)
         let actions = State.valid_actions game in
-        let* () = C.send_response game.to_play @@ ActionList actions in
+        let* () = C.send_response active @@ ActionList actions in
         loop game
 
   let play () : unit M.t =
