@@ -8,12 +8,10 @@ exception Connection_closed
 
 (** Create a server-side socket. *)
 let create_socket addr port =
-  (* Create a socket with an IPV6 address. *)
-  let socket = Lwt_unix.socket PF_INET6 SOCK_STREAM 0 in
+  (* Create a socket with an IPV4 address. *)
+  let socket = Lwt_unix.socket PF_INET SOCK_STREAM 0 in
   (* Make sure we can reuse the same socket several times. *)
   Lwt_unix.setsockopt socket Unix.SO_REUSEADDR true;
-  (* Forbid using an IPV4 address (IPV6 only). *)
-  Lwt_unix.setsockopt socket Unix.IPV6_ONLY true;
   (* Bind the socket to the address and port. *)
   let* () = Lwt_unix.bind socket @@ ADDR_INET (addr, port) in
   (* Start listening on the socket. *)
@@ -22,10 +20,10 @@ let create_socket addr port =
   Lwt.return socket
 
 (** Check a client address is authorized to connect to the server.
-    We only accept connections comming from the localhost (this machine), in IPV6. *)
+    We only accept connections comming from the localhost (this machine), in IPV4. *)
 let client_authorized client_addr : bool =
   match client_addr with
-  | Unix.ADDR_INET (inet_addr, _port) -> inet_addr = Unix.inet6_addr_loopback
+  | Unix.ADDR_INET (inet_addr, _port) -> inet_addr = Unix.inet_addr_loopback
   | Unix.ADDR_UNIX _ -> false
 
 (** Turn a socket address into a string. *)
@@ -61,8 +59,7 @@ let rec accept_connections socket n : connection list Lwt.t =
       in
       accept_connections socket n
 
-let connect_to_clients ?(addr = Unix.inet6_addr_loopback) ?(port = 8000) count :
-    connection list Lwt.t =
+let connect_to_clients ~addr ~port count : connection list Lwt.t =
   let* socket = create_socket addr port in
   accept_connections socket count
 

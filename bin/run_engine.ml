@@ -85,9 +85,9 @@ let () =
     Lwt_main.run
       begin
         let* () =
-          Lwt_io.printf "Listening for player on %s/%d.\n" (Unix.string_of_inet_addr addr) port
+          Lwt_io.printf "Listening for players on %s:%d.\n" (Unix.string_of_inet_addr addr) port
         in
-        let* conns = Server.connect_to_clients 2 in
+        let* conns = Server.connect_to_clients ~addr ~port 2 in
         match conns with
         | [ connA; connB ] ->
             let* () = Lwt_io.printf "Connected to players.\n" in
