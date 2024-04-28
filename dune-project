@@ -23,6 +23,8 @@
    (>= 5.7.0))
   (lwt_ppx
    (>= 2.1.0))
+  (websocket-lwt-unix
+   (>= 2.16))
   (yojson
    (>= 2.1.1))
   (ocamlgraph

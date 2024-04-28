@@ -78,7 +78,7 @@ let () =
   (* Parse command line arguments. *)
   Arg.parse cli_options (fun _ -> Arg.usage cli_options usage_msg) usage_msg;
   (* Connect to the players *)
-  let addr = Unix.inet6_addr_loopback in
+  let addr = Unix.inet_addr_loopback in
   let port = 8000 in
   let connA, connB =
     (* This part runs in Lwt.t instead of M.t because we don't have connections to the players yet. *)
