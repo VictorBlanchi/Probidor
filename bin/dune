@@ -4,3 +4,10 @@
  (modules run_engine)
  (preprocess
   (pps ppx_deriving.show)))
+
+(executable
+ (public_name websocket)
+ (libraries lwt lwt.unix websocket websocket-lwt-unix lwt_ppx)
+ (modules websocket)
+ (preprocess
+  (pps lwt_ppx)))

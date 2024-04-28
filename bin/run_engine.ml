@@ -12,13 +12,19 @@ open Lwt.Syntax
 (** Command line interface. *)
 
 (** Message printed in case of a malformed command line, or when help is requested. *)
-let usage_msg = "engine [--verbose]"
+let usage_msg = "engine [--verbose] [--port 1234]"
 
 (** Flag to control the amount of information printed by the engine. *)
 let verbose = ref false
 
+(** The port we use to listen for websocket connections. *)
+let port = ref 8000
+
 (** All command-line options. *)
-let cli_options = [ ("--verbose", Arg.Set verbose, "Output debug information") ]
+let cli_options =
+  [ ("--verbose", Arg.Set verbose, "Output debug information")
+  ; ("--port", Arg.Set_int port, "Set the port used to listen for incoming websocket connections")
+  ]
 
 (*****************************************************************************************************)
 (** Engine parameters. *)
@@ -41,7 +47,7 @@ end
 let lift (m : 'a Lwt.t) : 'a M.t = fun _ -> m
 
 (** Run a computation in our custom monad. *)
-let run (m : 'a M.t) connA connB : 'a = Lwt_main.run @@ m (connA, connB)
+let run connA connB (m : 'a M.t) : 'a = Lwt_main.run @@ m (connA, connB)
 
 module L : Engine.Logger with type 'a t = 'a M.t = struct
   type 'a t = 'a M.t
@@ -77,22 +83,18 @@ module E = Engine.Make (M) (L) (C)
 let () =
   (* Parse command line arguments. *)
   Arg.parse cli_options (fun _ -> Arg.usage cli_options usage_msg) usage_msg;
+  let uri = Uri.make ~scheme:"http" ~host:"localhost" ~port:!port () in
   (* Connect to the players *)
-  let addr = Unix.inet_addr_loopback in
-  let port = 8000 in
   let connA, connB =
     (* This part runs in Lwt.t instead of M.t because we don't have connections to the players yet. *)
     Lwt_main.run
       begin
-        let* () =
-          Lwt_io.printf "Listening for players on %s:%d.\n" (Unix.string_of_inet_addr addr) port
-        in
-        let* conns = Server.connect_to_clients ~addr ~port 2 in
-        match conns with
-        | [ connA; connB ] ->
-            let* () = Lwt_io.printf "Connected to players.\n" in
-            Lwt.return (connA, connB)
-        | _ -> failwith "Serve.connect_to_clients returned an invalid number of connections."
+        let* () = Lwt_io.printf "Listening for players on %s.\n" (Uri.to_string uri) in
+        let* stream = Server.listen uri in
+        let* connA = Lwt_stream.get stream in
+        let* connB = Lwt_stream.get stream in
+        let* () = Lwt_io.printf "Connected to players.\n" in
+        Lwt.return (Option.get connA, Option.get connB)
       end
   in
-  run (E.play ()) connA connB
+  run connA connB @@ E.play ()

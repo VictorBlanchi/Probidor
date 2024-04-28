@@ -1,6 +1,6 @@
 (library
  (name sockets)
  (public_name probidor.sockets)
- (libraries lwt lwt.unix lwt_ppx probidor.quoridor yojson)
+ (libraries lwt lwt.unix websocket-lwt-unix lwt_ppx probidor.quoridor yojson)
  (preprocess
   (pps lwt_ppx)))
